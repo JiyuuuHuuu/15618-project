@@ -1,5 +1,7 @@
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 
+#include "render.cuh"
+
 /* Handler for window-repaint event. Call back when the window first appears and
    whenever the window needs to be re-painted. */
 void display() {
@@ -20,6 +22,7 @@ void display() {
 
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
+   firework::parallel_render();
    glutInit(&argc, argv);                 // Initialize GLUT
    glutInitDisplayMode(GLUT_DOUBLE);
    glutCreateWindow("OpenGL Setup Test"); // Create a window with the given title
