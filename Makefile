@@ -1,9 +1,6 @@
-EXECUTABLE := firework
-LDFLAGS=-L/usr/local/cuda-11.7/lib64/ -lcudart
-CU_FILES   := render.cu
-CU_DEPS    :=
-CC_FILES   := firework.cpp
-LOGS	   := logs
+
+EXECUTABLE := firework-pixel
+LDFLAGS=-L/usr/local/cuda-11.7/lib64/ -lcudart -L./glew/lib/ -lGLEW
 
 all: $(EXECUTABLE)
 
@@ -19,6 +16,7 @@ LIBS       :=
 FRAMEWORKS :=
 
 NVCCFLAGS=-O3 -m64 --gpu-architecture compute_61 -ccbin /usr/bin/gcc
+INCLUDES=-I./glew/include
 LIBS += GL glut cudart GLU
 
 LDLIBS  := $(addprefix -l, $(LIBS))
@@ -26,8 +24,7 @@ LDFRAMEWORKS := $(addprefix -framework , $(FRAMEWORKS))
 
 NVCC=nvcc
 
-OBJS=$(OBJDIR)/firework.o $(OBJDIR)/render.o
-
+OBJS=$(OBJDIR)/firework-pixel.o
 
 .PHONY: dirs clean
 
@@ -39,18 +36,13 @@ dirs:
 clean:
 		rm -rf $(OBJDIR) *~ $(EXECUTABLE) $(LOGS) *.ppm
 
-export: $(EXFILES)
-	cp -p $(EXFILES) $(STARTER)
-
-
 $(EXECUTABLE): dirs $(OBJS)
 		$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) $(LDLIBS) $(LDFRAMEWORKS)
 
+$(OBJS): firework-pixel.cu dirs build-glew
+		$(NVCC) $< $(NVCCFLAGS) $(INCLUDES) -c -o $@
 
-
-
-$(OBJDIR)/%.o: %.cpp
-		$(CXX) $< $(CXXFLAGS) -c -o $@
-
-$(OBJDIR)/%.o: %.cu
-		$(NVCC) $< $(NVCCFLAGS) -c -o $@
+build-glew:
+		git submodule update --init --recursive
+		cd glew/auto && make
+		cd glew && make
