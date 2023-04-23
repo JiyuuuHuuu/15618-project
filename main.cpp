@@ -8,6 +8,7 @@
 #include <cuda_gl_interop.h>
 
 int2 loc = {W/2, H/2};
+float t = 0.0f;   //timer
 
 // texture and pixel objects
 GLuint pbo;     // OpenGL pixel buffer object
@@ -19,7 +20,7 @@ void render() {
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL,
                                        cuda_pbo_resource);
-  kernelLauncher(d_out, W, H, loc);
+  kernelLauncher(d_out, W, H, loc, t);
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
 }
 
@@ -35,6 +36,16 @@ void drawTexture() {
   glEnd();
   glDisable(GL_TEXTURE_2D);
 }
+
+void time(int x) 
+{
+	if (glutGetWindow() )
+	{
+		glutPostRedisplay();
+		glutTimerFunc(10, time, 0);
+		t += 0.0166f;
+	}
+} 
 
 void display() {
   render();
@@ -71,6 +82,7 @@ int main(int argc, char** argv) {
   initGLUT(&argc, argv);
   gluOrtho2D(0, W, H, 0);
   glutDisplayFunc(display);
+  time(0);
   glewInit();
   initPixelBuffer();
   glutMainLoop();
