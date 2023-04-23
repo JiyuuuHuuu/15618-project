@@ -1,22 +1,23 @@
-/*
-	Code written by Przemyslaw Zaworski https://github.com/przemyslawzaworski
-	References: https://github.com/straaljager/GPU-path-tracing-tutorial-2 , http://www.iquilezles.org/www/articles/derivative/derivative.htm
-	Compile from scratch (set *.inc and *lib files manually in new project) or for simplicity, 
-	replace code with simpleGL.cu (http://docs.nvidia.com/cuda/cuda-samples/index.html#simple-opengl)
-	Visual Studio: built in "Release" mode (x64).
-*/
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
 #include "helper_math.h"
+#include "firework.h"
 
+#include "helper.cu_inl"
+
+#define MAX_PARTICLE_NUM 8192
+#define GRAVITY 0.0f
 #define width 1280   //screen width
 #define height 720   //screen height
 
 float t = 0.0f;   //timer
 float3* device;   //pointer to memory on the device (GPU VRAM)
+particle* particles_device;
+particle particles_host[MAX_PARTICLE_NUM];
+int particle_num;
 GLuint buffer;   //buffer
   
 __device__  float plane(float3 p, float3 c, float3 n)   //plane signed distance field
@@ -79,6 +80,26 @@ __global__ void rendering(float3 *output,float k)
 	output[i] = make_float3(x, y, colour);
 }
 
+__global__ void rendering(float3 *output, float k, particle* particles, int particle_num)
+{   																												
+	unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
+	unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;
+	unsigned int i = (height - y - 1)*width + x;
+	// unsigned int blk_idx = blockIdx.y*gridDim.x + blockIdx.x;
+	// unsigned int thd_idx = threadIdx.y*blockDim.x + threadIdx.x;
+	// unsigned int idx = blk_idx*blockDim.x*blockDim.y + thd_idx;
+	
+	float color;
+	for (int it = 0; it < particle_num; it++) {
+		float2 pos = currP(particles[it].start_position, particles[it].start_velocity, make_float2(0.0f, -1*GRAVITY), k);
+		if (isWithinDistance(pos, make_float2((float)x, (float)y), particles[i].radius)) {
+			unsigned char bytes[] = {(unsigned char)(13), (unsigned char)(13), (unsigned char)(13), 1};
+			memcpy(&color, &bytes, sizeof(color));   //convert from 4 bytes to single float
+			output[i] = make_float3(x, y, color);
+		}
+	}
+}
+
 void time(int x) 
 {
 	if (glutGetWindow() )
@@ -96,7 +117,8 @@ void display(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 	dim3 block(16, 16, 1);
 	dim3 grid(width / block.x, height / block.y, 1);
-	rendering <<< grid, block >>>(device,t);   //execute kernel
+	// rendering <<< grid, block >>>(device, t);   //execute kernel
+	rendering <<< grid, block >>>(device, t, particles_device, particle_num);
 	cudaThreadSynchronize();
 	cudaGLUnmapBufferObject(buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -112,11 +134,19 @@ void display(void)
 int main(int argc, char** argv) 
 {
 	cudaMalloc(&device, width * height * sizeof(float3));   //allocate memory on the GPU VRAM
+	cudaMalloc(&particles_device, MAX_PARTICLE_NUM * sizeof(particle));
+
+	memset(particles_host, 0, MAX_PARTICLE_NUM*sizeof(particle));
+	particles_host[0].start_position = make_float2(50.0f, 50.0f);
+	particles_host[0].radius = 10.0f;
+	particle_num = 1;
+	cudaMemcpy(particles_device, particles_host, particle_num, cudaMemcpyHostToDevice);
+
 	glutInit(&argc, argv);   //OpenGL initializing
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Basic CUDA OpenGL raymarching - tetrahedron");
+	glutCreateWindow("Firework");
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glMatrixMode(GL_PROJECTION);
 	gluOrtho2D(0.0, width, 0.0, height);
@@ -131,4 +161,5 @@ int main(int argc, char** argv)
 	cudaGLRegisterBufferObject(buffer);   //register the buffer object for access by CUDA
 	glutMainLoop();   //event processing loop
 	cudaFree(device);
+	cudaFree(particles_device);
 }
