@@ -1,5 +1,5 @@
 
-EXECUTABLE := firework-pixel
+EXECUTABLE := firework
 LDFLAGS=-L/usr/local/cuda-11.7/lib64/ -lcudart -L./glew/lib/ -lGLEW
 
 all: $(EXECUTABLE)
@@ -24,7 +24,7 @@ LDFRAMEWORKS := $(addprefix -framework , $(FRAMEWORKS))
 
 NVCC=nvcc
 
-OBJS=$(OBJDIR)/firework-pixel.o
+OBJS=$(OBJDIR)/firework.o $(OBJDIR)/kernel.o
 
 .PHONY: dirs clean
 
@@ -38,9 +38,12 @@ clean:
 
 $(EXECUTABLE): dirs $(OBJS)
 		$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) $(LDLIBS) $(LDFRAMEWORKS)
-
-$(OBJS): firework-pixel.cu dirs build-glew
+	
+$(OBJDIR)/firework.o: main.cpp kernel.h build-glew
 		$(NVCC) $< $(NVCCFLAGS) $(INCLUDES) -c -o $@
+
+$(OBJDIR)/kernel.o: kernel.cu kernel.h
+		$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
 build-glew:
 		git submodule update --init --recursive
