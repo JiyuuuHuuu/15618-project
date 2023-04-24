@@ -10,17 +10,16 @@
 int2 loc = {W/2, H/2};
 float t = 0.0f;   //timer
 
-// texture and pixel objects
-GLuint pbo;     // OpenGL pixel buffer object
-GLuint tex;     // OpenGL texture object
+GLuint pbo;
+GLuint tex;
 struct cudaGraphicsResource *cuda_pbo_resource;
+particle *particles_device;
 
 void render() {
   uchar4 *d_out = 0;
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
-  cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL,
-                                       cuda_pbo_resource);
-  kernelLauncher(d_out, W, H, loc, t);
+  cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
+  kernelLauncher(d_out, W, H, particles_device, t);
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
 }
 
@@ -79,12 +78,31 @@ void exitfunc() {
 }
 
 int main(int argc, char** argv) {
+  makePalette();
+  
+  // initiate CUDA mem
+  particle *particles_host;
+  particles_host = (particle *)malloc(MAX_SCHEDULE_NUM*sizeof(particle));
+
+  for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
+    particles_host[i].t_0 = -1.0f;
+  }
+
+  particles_host[0].p_0 = make_float2(600.0f, 300.0f);
+  particles_host[0].t_0 = 10.0f;
+  particles_host[0].r = 255.0f;
+  particles_host[0].color = 0;
+
+  setUpSchedule(particles_host);
+  cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
+
   initGLUT(&argc, argv);
   gluOrtho2D(0, W, H, 0);
   glutDisplayFunc(display);
   time(0);
   glewInit();
   initPixelBuffer();
+  printf("start rendering...\n");
   glutMainLoop();
   atexit(exitfunc);
   return 0;

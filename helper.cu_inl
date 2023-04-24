@@ -1,0 +1,21 @@
+__device__
+unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
+
+__device__
+int isWithinDistance(float2 p_0, float2 p_1, float d) {
+  float distX = p_0.x - p_1.x;
+  float distY = p_0.y - p_1.y;
+
+  if (distX*distX + distY*distY <= d*d)
+    return 1;
+  else
+    return 0;
+}
+
+__device__
+float getDistance(float2 p_0, float2 p_1) {
+  float distX = p_0.x - p_1.x;
+  float distY = p_0.y - p_1.y;
+
+  return sqrt(distX*distX + distY*distY);
+}
