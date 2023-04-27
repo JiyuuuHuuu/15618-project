@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   }
 
   particles_host[0].p_0 = make_float2(600.0f, 300.0f);
-  particles_host[0].t_0 = 10.0f;
+  particles_host[0].t_0 = 2.0f;
   particles_host[0].r = 255.0f;
   particles_host[0].color = 0;
 

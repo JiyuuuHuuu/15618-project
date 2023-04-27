@@ -19,3 +19,13 @@ float getDistance(float2 p_0, float2 p_1) {
 
   return sqrt(distX*distX + distY*distY);
 }
+
+__device__
+float2 currP(float2 p_0, float2 v_0, float_2 a, float t) {
+  return p_0 + v_0*t + 1/2*a*t*t;
+}
+
+__device__
+float currD(float d_0, float factor, float t) {
+  return p_0 + v_0*t + 1/2*a*t*t;
+}
