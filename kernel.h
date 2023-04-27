@@ -31,7 +31,7 @@ struct firework {
 
 void kernelLauncher(uchar4 *d_out, int w, int h, int2 pos, float t);
 
-void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, float t);
+void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, int *idx_holder, float t);
 
 void makePalette(void);
 void setUpSchedule(particle *particles_host);

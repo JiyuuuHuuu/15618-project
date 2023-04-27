@@ -21,11 +21,23 @@ float getDistance(float2 p_0, float2 p_1) {
 }
 
 __device__
-float2 currP(float2 p_0, float2 v_0, float_2 a, float t) {
-  return p_0 + v_0*t + 1/2*a*t*t;
+float2 currP(float2 p_0, float2 v_0, float2 a, float t) {
+  return p_0 + v_0*t + 1.0f/2.0f*a*t*t;
 }
 
 __device__
 float currD(float d_0, float factor, float t) {
-  return p_0 + v_0*t + 1/2*a*t*t;
+  return max(0.0f, d_0 - factor*t);
+}
+
+__device__
+float random_float(float minVal, float maxVal, unsigned int *seed) {
+  curandState s;
+  curand_init(*seed, 0, 0, &s);  // Initialize random number generator
+
+  float randomFloat = curand_uniform(&s);  // Generate a random float between 0 and 1
+  randomFloat = (randomFloat * (maxVal - minVal)) + minVal;  // Scale to desired range
+  *seed++;
+
+  return randomFloat;
 }

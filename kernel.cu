@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <curand_kernel.h>
 #include "kernel.h"
+#include "helper_math.h"
 #include "helper.cu_inl"
 #define TX 32
 #define TY 32
@@ -37,18 +39,21 @@ void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, fl
   const int blk_idx = blockIdx.y*gridDim.x + blockIdx.x;
   const int thd_idx = threadIdx.y*blockDim.x + threadIdx.x;
   const int idx = blk_idx*blockDim.x*blockDim.y + thd_idx; // get 1D index
-  if (idx + *schedule_idx >= MAX_SCHEDULE_NUM) return;
-  if (idx + *buffer_head >= MAX_PARTICLE_NUM) return;
+  const int schedule_idx_local = *schedule_idx;
+  const int buffer_head_local = *buffer_head;
+  __syncthreads();
+  if (idx + schedule_idx_local >= MAX_SCHEDULE_NUM) return;
+  if (idx + buffer_head_local >= MAX_PARTICLE_NUM) return;
 
-  particle schedule_particle = cuSchedule[idx + *schedule_idx];
+  particle schedule_particle = cuSchedule[idx + schedule_idx_local];
   if (schedule_particle.t_0 >= 0.0f && schedule_particle.t_0 <= t) {
-    buffer[idx + *buffer_head].pack[0] = schedule_particle;
+    buffer[idx + buffer_head_local].pack[0] = schedule_particle;
 
+    printf("move to display\n");
     // update indices
-    if (idx + *schedule_idx + 1 == MAX_SCHEDULE_NUM) {
-      *schedule_idx += idx + 1;
-      *buffer_head += idx + 1;
-    } else if (cuSchedule[idx + *schedule_idx + 1].t_0 > t) {
+    if (idx + schedule_idx_local + 1 == MAX_SCHEDULE_NUM ||
+        cuSchedule[idx + schedule_idx_local + 1].t_0 > t ||
+        cuSchedule[idx + schedule_idx_local + 1].t_0 < 0) {
       *schedule_idx += idx + 1;
       *buffer_head += idx + 1;
     }
@@ -64,6 +69,7 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
   const int firework_per_it = gridDim.x*gridDim.y*blockDim.x*blockDim.y/PARTICLE_NUM_PER_FIREWORK;
   const int particle_idx = idx % PARTICLE_NUM_PER_FIREWORK;
 
+  unsigned int seed = idx + (unsigned int)(t*100);
   int buffer_idx = idx/PARTICLE_NUM_PER_FIREWORK + *buffer_tail;
   for (int i = buffer_idx; i < *buffer_head; i += firework_per_it) {
     firework curr_firework = buffer[i];
@@ -101,19 +107,21 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
     __syncthreads();
     buffer[i].pack[particle_idx] = curr;
   }
+
+  // TODO: free up space, implement circular allocation
 }
 
 __global__
-void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, int *buffer_head, int *buffer_tail, int *schedule_idx,) {
+void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, int *buffer_head, int *buffer_tail, int *schedule_idx) {
+  const int c = blockIdx.x*blockDim.x + threadIdx.x;
+  const int r = blockIdx.y*blockDim.y + threadIdx.y;
   launchSchedule(particles, schedule_idx, buffer_head, t);
   __syncthreads();
 
   // display
   firework *buffer = reinterpret_cast<firework *>(particles);
-  const int c = blockIdx.x*blockDim.x + threadIdx.x;
-  const int r = blockIdx.y*blockDim.y + threadIdx.y;
   
-  if ((c >= w) || (r >= h)) {
+  if (!((c >= w) || (r >= h))) {
     const int idx = c + r*w; // 1D indexing
     uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
     for (int i = *buffer_tail; i < *buffer_head; i++) {
@@ -122,16 +130,16 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
       if (upshoot.explosion_height > 0) {
         // only upshooting particle need display
         float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
-        if (isWithinDistance(upshoot.p_0, make_float2((float)c, (float)r), upshoot.r)) {
+        if (isWithinDistance(p, make_float2((float)c, (float)r), upshoot.r)) {
           pixel_color = cuPalette[upshoot.color]; // TODO: support particle overlap
         }
       } else {
         // firework after explosion
         for (int j = 1; j < PARTICLE_NUM_PER_FIREWORK; j++) {
           particle curr = curr_firework->pack[j];
-          if (p.t_0 < 0) continue;
+          if (curr.t_0 < 0) continue;
           float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
-          if (isWithinDistance(curr.p_0, make_float2((float)c, (float)r), curr.r)) {
+          if (isWithinDistance(p, make_float2((float)c, (float)r), curr.r)) {
             pixel_color = cuPalette[curr.color]; // TODO: support particle overlap
           }
         }
@@ -141,7 +149,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
   }
   __syncthreads();
 
-  // update particles
+  // TODO: update particles
 }
 
 void kernelLauncher(uchar4 *d_out, int w, int h, int2 pos, float t) {
@@ -151,11 +159,15 @@ void kernelLauncher(uchar4 *d_out, int w, int h, int2 pos, float t) {
   cudaDeviceSynchronize();
 }
 
-void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, float t) {
+void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, int *idx_holder, float t) {
   const dim3 blockSize(TX, TY);
   const dim3 gridSize = dim3((w + TX - 1)/TX, (h + TY - 1)/TY);
-  fireworkKernel<<<gridSize, blockSize>>>(d_out, w, h, particles, t);
-  cudaDeviceSynchronize();
+  fireworkKernel<<<gridSize, blockSize>>>(d_out, w, h, particles, t, idx_holder, idx_holder+1, idx_holder+2);
+  cudaError_t cudaStatus = cudaDeviceSynchronize();
+  if (cudaStatus != cudaSuccess) {
+    printf("CUDA error after cudaDeviceSynchronize: %s\n", cudaGetErrorString(cudaStatus));
+    exit(1);
+  }
 }
 
 void makePalette(void) {

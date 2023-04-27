@@ -14,13 +14,15 @@ GLuint pbo;
 GLuint tex;
 struct cudaGraphicsResource *cuda_pbo_resource;
 particle *particles_device;
+int *idx_holder_device;
 
 void render() {
   uchar4 *d_out = 0;
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
-  kernelLauncher(d_out, W, H, particles_device, t);
+  kernelLauncher(d_out, W, H, particles_device, idx_holder_device, t);
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
+  // printf("render done\n");
 }
 
 void drawTexture() {
@@ -89,12 +91,17 @@ int main(int argc, char** argv) {
   }
 
   particles_host[0].p_0 = make_float2(600.0f, 300.0f);
-  particles_host[0].t_0 = 2.0f;
-  particles_host[0].r = 255.0f;
+  particles_host[0].a = make_float2(0.0f, 0.0f);
+  particles_host[0].t_0 = 1.0f;
+  particles_host[0].v_0 = make_float2(2.0f, 0.0f);
+  particles_host[0].explosion_height = 400.0f;
+  particles_host[0].r = 100.0f;
   particles_host[0].color = 0;
 
   setUpSchedule(particles_host);
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
+  cudaMalloc(&idx_holder_device, sizeof(int) * 3);
+  cudaMemset(idx_holder_device, 0, sizeof(int) * 3);
 
   initGLUT(&argc, argv);
   gluOrtho2D(0, W, H, 0);
