@@ -1,3 +1,11 @@
 firework
 firework-pixel
 *.o
+input/s1*.csv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+.vscode
