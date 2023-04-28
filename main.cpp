@@ -1,6 +1,14 @@
+// Entry point of fireworks
+// Usage:
+//   ./firework -f ./input/s000.txt
+
 #include "kernel.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -15,6 +23,68 @@ GLuint tex;
 struct cudaGraphicsResource *cuda_pbo_resource;
 particle *particles_device;
 int *idx_holder_device;
+
+class CmdParser {
+  public:
+    CmdParser(int argc, char **argv) {
+      for (int i = 1; i < argc; ++i) {
+        this->tokens.push_back(std::string(argv[i]));
+      }
+    }
+
+    std::string GetOption(const std::string &option) const {
+      std::vector<std::string>::const_iterator iter;
+      iter = std::find(this->tokens.begin(), this->tokens.end(), option);
+      if (iter != this->tokens.end() && ++iter != this->tokens.end()){
+        return *iter;
+      }
+      return "";
+    }
+  private:
+    std::vector<std::string> tokens;
+};
+
+bool parseFile(const std::string &file, particle *particles) {
+  std::ifstream inFile;
+  inFile.open(file);
+  if (!inFile) {
+    return false;
+  }
+  std::string line;
+  int idx = 0;
+  while (std::getline(inFile, line)) {
+    std::stringstream sstream(line);
+    std::string str;
+    const char delim = ',';
+    std::getline(sstream, str, delim);
+    particles[idx].t_0 = (float)atof(str.c_str());
+    std::getline(sstream, str, delim);
+    float p0_x = (float)atof(str.c_str());
+    std::getline(sstream, str, delim);
+    float p0_y = (float)atof(str.c_str());
+    particles[idx].p_0 = make_float2(p0_x, p0_y);
+    std::getline(sstream, str, delim);
+    float v0_x = (float)atof(str.c_str());
+    std::getline(sstream, str, delim);
+    float v0_y = (float)atof(str.c_str());
+    particles[idx].v_0 = make_float2(v0_x, v0_y);
+    particles[idx].a = make_float2(0.0f, 0.0f);
+    std::getline(sstream, str, delim);
+    particles[idx].r = (float)atof(str.c_str());
+    std::getline(sstream, str, delim);
+    particles[idx].explosion_height = (float)atof(str.c_str());
+    std::getline(sstream, str, '\n');
+    particles[idx].color = (int)atoi(str.c_str());
+    idx++;
+    if (idx >= MAX_SCHEDULE_NUM) {
+      // truncate the extra
+      printf("Warning: too many input schedules, truncating tails");
+      break;
+    }
+  }
+  inFile.close();
+  return true;
+}
 
 void render() {
   uchar4 *d_out = 0;
@@ -81,14 +151,46 @@ void exitfunc() {
 
 int main(int argc, char** argv) {
   makePalette();
-  
+
   // initiate CUDA mem
   particle *particles_host;
   particles_host = (particle *)malloc(MAX_SCHEDULE_NUM*sizeof(particle));
 
   for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
     particles_host[i].t_0 = -1.0f;
+    particles_host[i].p_0 = make_float2(0.0f, 0.0f);
+    particles_host[i].v_0 = make_float2(0.0f, 0.0f);
+    particles_host[i].a = make_float2(0.0f, 0.0f);
+    particles_host[i].r = 0.0f;
+    particles_host[i].explosion_height = 0.0f;
+    particles_host[i].color = 0;
   }
+
+  // // Parse command line arguments.
+  // bool parse_success = false;
+  // CmdParser cmd_parser(argc, argv);
+  // std::string file = cmd_parser.GetOption("-f");
+  // // Parse file.
+  // if (!file.empty()) {
+  //   parseFile(file, particles_host);
+  // } else {
+  //   parseFile("./input/s000.csv", particles_host);
+  // }
+  // // Validate schedule.
+  // bool schedule_invalid = false;
+  // for (int i = 1; i < MAX_SCHEDULE_NUM; ++i) {
+  //   if (particles_host[i].t_0 == -1.0f) {
+  //     break;
+  //   }
+  //   if (particles_host[i-1].t_0 > particles_host[i].t_0) {
+  //     schedule_invalid = true;
+  //   }
+  // }
+  // if (schedule_invalid) {
+  //   printf("Error: invalid schedule\n");
+  //   return 1;
+  // }
+  // // printf("**t_0: %f\n", particles_host[0].t_0);
 
   particles_host[0].p_0 = make_float2(600.0f, 300.0f);
   particles_host[0].a = make_float2(0.0f, 0.0f);
