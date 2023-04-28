@@ -68,7 +68,7 @@ bool parseFile(const std::string &file, particle *particles) {
     std::getline(sstream, str, delim);
     float v0_y = (float)atof(str.c_str());
     particles[idx].v_0 = make_float2(v0_x, v0_y);
-    particles[idx].a = make_float2(0.0f, 0.0f);
+    particles[idx].a = make_float2(0.0f, G);
     std::getline(sstream, str, delim);
     particles[idx].r = (float)atof(str.c_str());
     std::getline(sstream, str, delim);
@@ -84,6 +84,21 @@ bool parseFile(const std::string &file, particle *particles) {
   }
   inFile.close();
   return true;
+}
+
+// Return true if valid.
+bool check_schedule(particle *particles) {
+  bool schedule_invalid = false;
+  // Force t_0.
+  for (int i = 1; i < MAX_SCHEDULE_NUM; ++i) {
+    if (particles[i].t_0 == -1.0f) {
+      break;
+    }
+    if (particles[i-1].t_0 > particles[i].t_0) {
+      schedule_invalid = true;
+    }
+  }
+  return !schedule_invalid;
 }
 
 void render() {
@@ -165,38 +180,29 @@ int main(int argc, char** argv) {
     particles_host[i].color = 0;
   }
 
-  // // Parse command line arguments.
-  // bool parse_success = false;
-  // CmdParser cmd_parser(argc, argv);
-  // std::string file = cmd_parser.GetOption("-f");
-  // // Parse file.
-  // if (!file.empty()) {
-  //   parseFile(file, particles_host);
-  // } else {
-  //   parseFile("./input/s000.csv", particles_host);
-  // }
-  // // Validate schedule.
-  // bool schedule_invalid = false;
-  // for (int i = 1; i < MAX_SCHEDULE_NUM; ++i) {
-  //   if (particles_host[i].t_0 == -1.0f) {
-  //     break;
-  //   }
-  //   if (particles_host[i-1].t_0 > particles_host[i].t_0) {
-  //     schedule_invalid = true;
-  //   }
-  // }
-  // if (schedule_invalid) {
-  //   printf("Error: invalid schedule\n");
-  //   return 1;
-  // }
-  // // printf("**t_0: %f\n", particles_host[0].t_0);
+  // Parse command line arguments.
+  bool parse_success = false;
+  CmdParser cmd_parser(argc, argv);
+  std::string file = cmd_parser.GetOption("-f");
+  // Parse file.
+  if (!file.empty()) {
+    parseFile(file, particles_host);
+  } else {
+    parseFile("./input/s000.csv", particles_host);
+  }
+  // Validate schedule.
+  if (!check_schedule(particles_host)) {
+    printf("Error: invalid schedule\n");
+    return 1;
+  }
+  // printf("**t_0: %f\n", particles_host[0].t_0);
 
-  particles_host[0].p_0 = make_float2(300.0f, 580.0f);
-  particles_host[0].a = make_float2(0.0f, G);
-  particles_host[0].t_0 = 1.0f;
-  particles_host[0].v_0 = make_float2(0.0f, -100.0f);
-  particles_host[0].explosion_height = 300.0f;
-  particles_host[0].r = 10.0f;
+  // particles_host[0].p_0 = make_float2(300.0f, 580.0f);
+  // particles_host[0].a = make_float2(0.0f, G);
+  // particles_host[0].t_0 = 1.0f;
+  // particles_host[0].v_0 = make_float2(0.0f, -100.0f);
+  // particles_host[0].explosion_height = 300.0f;
+  // particles_host[0].r = 10.0f;
 
   setUpSchedule(particles_host);
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);

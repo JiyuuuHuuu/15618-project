@@ -22,14 +22,14 @@ t0_low = 0.0
 t0_high = 15.0
 p0_x_low = 200.0
 p0_x_high = 1000.0
-p0_y_low = 0.0
-p0_y_high = 150.0
-v0_y_low = 0.0
-v0_y_high = 5.0
+p0_y_low = 500.0
+p0_y_high = 600.0
+v0_y_low = -100.0
+v0_y_high = -50.0
 r_low = 5.0
 r_high = 10.0
-eh_low = 150.0
-eh_high = 550.0
+eh_low = 50.0
+eh_high = 450.0
 color_low = 0
 color_high = 5
 
@@ -45,7 +45,7 @@ def create(t0):
     """Create one row in random.
 
     t_0, p0_x, p0_y, v0_x, v0_y, r, explosion_height, color
-    [0.0, 15.0] [200.0, 1000.0] [0.0, 150.0] 0.0 (0.0, 5.0] [5.0, 10.0] [150.0,550.0] [0, 5]
+    [0.0, 15.0] [200.0, 1000.0] [500.0, 600.0] 0.0 [-100.0, -50.0] [5.0, 10.0] [50.0, 450.0] [0, 5]
     """
     p0_x = rd(p0_x_low, p0_x_high)
     p0_y = rd(p0_y_low, p0_y_high)
