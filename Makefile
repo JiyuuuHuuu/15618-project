@@ -42,7 +42,7 @@ $(EXECUTABLE): dirs $(OBJS)
 $(OBJDIR)/firework.o: main.cpp kernel.h build-glew
 		$(NVCC) $< $(NVCCFLAGS) $(INCLUDES) -c -o $@
 
-$(OBJDIR)/kernel.o: kernel.cu helper.cu_inl kernel.h helper_math.h
+$(OBJDIR)/kernel.o: kernel.cu helper.cu_inl pattern.cu_inl kernel.h helper_math.h
 		$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
 build-glew:

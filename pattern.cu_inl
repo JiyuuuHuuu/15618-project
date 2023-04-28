@@ -1,0 +1,19 @@
+typedef void (*FuncPtr)(particle &, float2, float, int, unsigned int &);
+
+__device__
+void pattern0(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  curr.p_0 = p_0;
+  curr.v_0 = make_float2(
+    random_float(-20.0f, 20.0f, seed),
+    random_float(-20.0f, 20.0f, seed)
+  );
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  unsigned char color = random_char(0, 5, seed);
+}
+
+__device__ FuncPtr patternArray[] = {
+  pattern0
+};

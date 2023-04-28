@@ -3,6 +3,7 @@
 #include "kernel.h"
 #include "helper_math.h"
 #include "helper.cu_inl"
+#include "pattern.cu_inl"
 #define TX 32
 #define TY 32
 
@@ -42,19 +43,24 @@ void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, fl
   const int schedule_idx_local = *schedule_idx;
   const int buffer_head_local = *buffer_head;
   __syncthreads();
-  if (idx + schedule_idx_local >= MAX_SCHEDULE_NUM) return;
-  if (idx + buffer_head_local >= MAX_PARTICLE_NUM) return;
+  if (idx + schedule_idx_local >= MAX_SCHEDULE_NUM ||
+      idx + buffer_head_local >= MAX_PARTICLE_NUM) return;
+  
+  if (idx == 0) printf("hello from thread 0\n");
 
   particle schedule_particle = cuSchedule[idx + schedule_idx_local];
   if (schedule_particle.t_0 >= 0.0f && schedule_particle.t_0 <= t) {
+    printf("move to display\n");
     buffer[idx + buffer_head_local].pack[0] = schedule_particle;
 
-    printf("move to display\n");
     // update indices
     if (idx + schedule_idx_local + 1 == MAX_SCHEDULE_NUM ||
-        cuSchedule[idx + schedule_idx_local + 1].t_0 > t ||
-        cuSchedule[idx + schedule_idx_local + 1].t_0 < 0) {
+        cuSchedule[idx + schedule_idx_local + 1].t_0 > t) {
       *schedule_idx += idx + 1;
+      *buffer_head += idx + 1;
+    } else if (cuSchedule[idx + schedule_idx_local + 1].t_0 < 0) {
+      // no schedule left to display
+      *schedule_idx = MAX_SCHEDULE_NUM;
       *buffer_head += idx + 1;
     }
   }
@@ -66,8 +72,10 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
   const int blk_idx = blockIdx.y*gridDim.x + blockIdx.x;
   const int thd_idx = threadIdx.y*blockDim.x + threadIdx.x;
   const int idx = blk_idx*blockDim.x*blockDim.y + thd_idx; // get 1D index
-  const int firework_per_it = gridDim.x*gridDim.y*blockDim.x*blockDim.y/PARTICLE_NUM_PER_FIREWORK;
+  const int firework_per_it = (gridDim.x*gridDim.y*blockDim.x*blockDim.y)/PARTICLE_NUM_PER_FIREWORK;
   const int particle_idx = idx % PARTICLE_NUM_PER_FIREWORK;
+
+  // if (idx == 0) printf("firework_per_it = %d\n", firework_per_it);
 
   unsigned int seed = idx + (unsigned int)(t*100);
   int buffer_idx = idx/PARTICLE_NUM_PER_FIREWORK + *buffer_tail;
@@ -80,7 +88,7 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
       // upshooting particle
       if (curr.explosion_height > 0) {
         float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
-        if (p.y >= curr.explosion_height) curr.explosion_height = -1.0f; // mark explosion phase
+        if (p.y <= curr.explosion_height) curr.explosion_height = -1.0f; // mark explosion phase
       } else {
         int isEnd = 1;
         for (int j = 1; j < PARTICLE_NUM_PER_FIREWORK; j++) {
@@ -95,8 +103,9 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
       // child particle
       if (upshoot.explosion_height > 0) {
         float2 p_up = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
-        if (p_up.y >= upshoot.explosion_height) {
+        if (p_up.y <= upshoot.explosion_height) {
           // TODO: generate child particle, determine velocity and acceleration
+          patternArray[upshoot.color](curr, p_up, t, particle_idx, seed);
         }
       } else {
         // check particle end
@@ -108,25 +117,32 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
     buffer[i].pack[particle_idx] = curr;
   }
 
-  // TODO: free up space, implement circular allocation
+  // TODO: implement circular allocation
 }
 
 __global__
 void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, int *buffer_head, int *buffer_tail, int *schedule_idx) {
   const int c = blockIdx.x*blockDim.x + threadIdx.x;
   const int r = blockIdx.y*blockDim.y + threadIdx.y;
+  const int idx = c + r*w; // 1D indexing
   launchSchedule(particles, schedule_idx, buffer_head, t);
   __syncthreads();
 
   // display
+  int tail_increment = 0;
+  int freeup = 1;
   firework *buffer = reinterpret_cast<firework *>(particles);
   
   if (!((c >= w) || (r >= h))) {
-    const int idx = c + r*w; // 1D indexing
     uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
     for (int i = *buffer_tail; i < *buffer_head; i++) {
       firework *curr_firework = buffer + i;
       particle upshoot = curr_firework->pack[0];
+      if (upshoot.t_0 < 0) {
+        if (freeup) tail_increment++;
+        continue;
+      }
+      freeup = 0;
       if (upshoot.explosion_height > 0) {
         // only upshooting particle need display
         float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
@@ -147,9 +163,11 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
     }
     d_out[idx] = pixel_color;
   }
+  if (idx == 0) *buffer_tail += tail_increment;
   __syncthreads();
 
   // TODO: update particles
+  updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
 }
 
 void kernelLauncher(uchar4 *d_out, int w, int h, int2 pos, float t) {

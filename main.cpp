@@ -92,7 +92,6 @@ void render() {
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
   kernelLauncher(d_out, W, H, particles_device, idx_holder_device, t);
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
-  // printf("render done\n");
 }
 
 void drawTexture() {
@@ -192,13 +191,12 @@ int main(int argc, char** argv) {
   // }
   // // printf("**t_0: %f\n", particles_host[0].t_0);
 
-  particles_host[0].p_0 = make_float2(600.0f, 300.0f);
-  particles_host[0].a = make_float2(0.0f, 0.0f);
+  particles_host[0].p_0 = make_float2(300.0f, 580.0f);
+  particles_host[0].a = make_float2(0.0f, G);
   particles_host[0].t_0 = 1.0f;
-  particles_host[0].v_0 = make_float2(2.0f, 0.0f);
-  particles_host[0].explosion_height = 400.0f;
-  particles_host[0].r = 100.0f;
-  particles_host[0].color = 0;
+  particles_host[0].v_0 = make_float2(0.0f, -100.0f);
+  particles_host[0].explosion_height = 300.0f;
+  particles_host[0].r = 10.0f;
 
   setUpSchedule(particles_host);
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);

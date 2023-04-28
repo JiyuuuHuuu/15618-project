@@ -31,13 +31,25 @@ float currD(float d_0, float factor, float t) {
 }
 
 __device__
-float random_float(float minVal, float maxVal, unsigned int *seed) {
+float random_float(float minVal, float maxVal, unsigned int &seed) {
   curandState s;
-  curand_init(*seed, 0, 0, &s);  // Initialize random number generator
+  curand_init(seed, 0, 0, &s);  // Initialize random number generator
 
   float randomFloat = curand_uniform(&s);  // Generate a random float between 0 and 1
   randomFloat = (randomFloat * (maxVal - minVal)) + minVal;  // Scale to desired range
-  *seed++;
+  seed++;
 
   return randomFloat;
+}
+
+__device__
+unsigned char random_char(unsigned char minVal, unsigned char maxVal, unsigned int &seed) {
+  curandState s;
+  curand_init(seed, 0, 0, &s);  // Initialize random number generator
+
+  float randomFloat = curand_uniform(&s);  // Generate a random float between 0 and 1
+  unsigned char randomUnsignedChar = static_cast<unsigned char>(randomFloat * (maxVal - minVal + 1)) + minVal;  // Scale to desired range
+  seed++;
+
+  return randomUnsignedChar;
 }
