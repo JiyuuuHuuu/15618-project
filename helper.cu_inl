@@ -53,3 +53,20 @@ unsigned char random_char(unsigned char minVal, unsigned char maxVal, unsigned i
 
   return randomUnsignedChar;
 }
+
+__device__
+float2 random_ring(float r, unsigned int &seed) {
+  float minVal = -r;
+  float maxVal = r;
+  curandState s;
+  curand_init(seed, 0, 0, &s);  // Initialize random number generator
+
+  float randomFloat = curand_uniform(&s);  // Generate a random float between 0 and 1
+  randomFloat = (randomFloat * (maxVal - minVal)) + minVal;  // Scale to desired range
+  float temp = curand_uniform(&s);
+  float sign = temp >= 0.5f ? 1.0f : -1.0f;
+  seed++;
+
+  float square = r * r - randomFloat * randomFloat;
+  return make_float2(randomFloat, sign * sqrt(square));
+}

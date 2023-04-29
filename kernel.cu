@@ -45,8 +45,6 @@ void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, fl
   __syncthreads();
   if (idx + schedule_idx_local >= MAX_SCHEDULE_NUM ||
       idx + buffer_head_local >= MAX_PARTICLE_NUM) return;
-  
-  if (idx == 0) printf("hello from thread 0\n");
 
   particle schedule_particle = cuSchedule[idx + schedule_idx_local];
   if (schedule_particle.t_0 >= 0.0f && schedule_particle.t_0 <= t) {
@@ -77,7 +75,7 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
 
   // if (idx == 0) printf("firework_per_it = %d\n", firework_per_it);
 
-  unsigned int seed = idx + (unsigned int)(t*100);
+  unsigned int seed = idx*7 + (unsigned int)(t*100);
   int buffer_idx = idx/PARTICLE_NUM_PER_FIREWORK + *buffer_tail;
   for (int i = buffer_idx; i < *buffer_head; i += firework_per_it) {
     firework curr_firework = buffer[i];
@@ -104,8 +102,8 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
       if (upshoot.explosion_height > 0) {
         float2 p_up = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
         if (p_up.y <= upshoot.explosion_height) {
-          // TODO: generate child particle, determine velocity and acceleration
-          patternArray[upshoot.color](curr, p_up, t, particle_idx, seed);
+          // patternArray[upshoot.color](curr, p_up, t, particle_idx, seed);
+          patterns(curr, p_up, t, particle_idx, seed, upshoot.color);
         }
       } else {
         // check particle end

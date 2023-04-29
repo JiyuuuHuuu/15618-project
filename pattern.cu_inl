@@ -1,7 +1,8 @@
-typedef void (*FuncPtr)(particle &, float2, float, int, unsigned int &);
+// typedef void (*FuncPtr)(particle &, float2, float, int, unsigned int &);
 
 __device__
 void pattern0(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a square
   curr.p_0 = p_0;
   curr.v_0 = make_float2(
     random_float(-20.0f, 20.0f, seed),
@@ -11,9 +12,115 @@ void pattern0(particle &curr, const float2 p_0, const float t, int offset, unsig
   curr.r = 5.0f;
   curr.t_0 = t;
   curr.explosion_height = 5;
-  unsigned char color = random_char(0, 5, seed);
+  curr.color = random_char(0, 5, seed);
 }
 
+__device__
+void pattern1(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle on ring
+  curr.p_0 = p_0;
+  curr.v_0 = random_ring(30.0f, seed);
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  curr.color = random_char(0, 5, seed);
+}
+
+__device__
+void pattern2(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a square
+  curr.p_0 = p_0;
+  curr.v_0 = make_float2(
+    random_float(-20.0f, 20.0f, seed),
+    random_float(-20.0f, 20.0f, seed)
+  );
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  curr.color = random_char(0, 5, seed);
+}
+
+__device__
+void pattern3(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a square
+  curr.p_0 = p_0;
+  curr.v_0 = make_float2(
+    random_float(-20.0f, 20.0f, seed),
+    random_float(-20.0f, 20.0f, seed)
+  );
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  curr.color = random_char(0, 5, seed);
+}
+
+__device__
+void pattern4(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a square
+  curr.p_0 = p_0;
+  curr.v_0 = make_float2(
+    random_float(-20.0f, 20.0f, seed),
+    random_float(-20.0f, 20.0f, seed)
+  );
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  curr.color = random_char(0, 5, seed);
+}
+
+__device__
+void pattern5(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a square
+  curr.p_0 = p_0;
+  curr.v_0 = make_float2(
+    random_float(-20.0f, 20.0f, seed),
+    random_float(-20.0f, 20.0f, seed)
+  );
+  curr.a = make_float2(0.0f, G);
+  curr.r = 5.0f;
+  curr.t_0 = t;
+  curr.explosion_height = 5;
+  curr.color = random_char(0, 5, seed);
+}
+
+/*
 __device__ FuncPtr patternArray[] = {
-  pattern0
+  pattern0,
+  pattern1,
+  pattern2,
+  pattern3,
+  pattern4,
+  pattern5
 };
+*/
+
+// need to register patterns in this function
+__device__
+void patterns(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed, int idx) {
+  switch (idx) {
+    case 0:
+      pattern0(curr, p_0, t, offset, seed);
+      break;
+    case 1:
+      pattern1(curr, p_0, t, offset, seed);
+      break;
+    case 2:
+      pattern2(curr, p_0, t, offset, seed);
+      break;
+    case 3:
+      pattern3(curr, p_0, t, offset, seed);
+      break;
+    case 4:
+      pattern4(curr, p_0, t, offset, seed);
+      break;
+    case 5:
+      pattern5(curr, p_0, t, offset, seed);
+      break;
+    default:
+      pattern0(curr, p_0, t, offset, seed);
+  }
+}

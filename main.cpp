@@ -204,6 +204,10 @@ int main(int argc, char** argv) {
   // particles_host[0].explosion_height = 300.0f;
   // particles_host[0].r = 10.0f;
 
+  for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
+    particles_host[i].explosion_height = 400.0f;
+  }
+
   setUpSchedule(particles_host);
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
   cudaMalloc(&idx_holder_device, sizeof(int) * 3);
