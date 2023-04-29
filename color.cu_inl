@@ -1,10 +1,23 @@
 __device__
 void color0(uchar4 &pixel_color, const float t) {
   // t: should be global t - t_0
+  // decaying yellow
   pixel_color.w = 255;
   pixel_color.x = 255 - clip(10.2f*t*t);
   pixel_color.y = 255 - clip(10.2f*t*t);
   pixel_color.z = 255 - clip(t*204.0f);
+}
+
+__device__
+void color1(uchar4 &pixel_color, const float t, const int offset) {
+  // t: should be global t - t_0
+  // blinking yellow
+  unsigned int seed = (unsigned int)(t*100) + (unsigned int)offset;
+  float b_factor = random_float(255.0f, 0.0f, seed);
+  pixel_color.w = 255;
+  pixel_color.x = 255 - (unsigned char)b_factor;
+  pixel_color.y = 255 - (unsigned char)b_factor;
+  pixel_color.z = 255 - clip(t*204.0f) - (unsigned char)b_factor;
 }
 
 // need to register patterns in this function
@@ -14,6 +27,9 @@ void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr
   switch (curr.color) {
     case 0:
       color0(temp, t - curr.t_0);
+      break;
+    case 1:
+      color1(temp, t - curr.t_0, offset);
       break;
     default:
       color0(temp, t - curr.t_0);
