@@ -2,6 +2,9 @@ __device__
 unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
 
 __device__
+unsigned char clip(float n) { return n > 255.0f ? 255 : (n < 0.0f ? 0 : (unsigned char)n); }
+
+__device__
 int isWithinDistance(float2 p_0, float2 p_1, float d) {
   float distX = p_0.x - p_1.x;
   float distY = p_0.y - p_1.y;
@@ -69,4 +72,16 @@ float2 random_ring(float r, unsigned int &seed) {
 
   float square = r * r - randomFloat * randomFloat;
   return make_float2(randomFloat, sign * sqrt(square));
+}
+
+__device__
+float2 random_circle(float r, unsigned int &seed) {
+  float2 ring = random_ring(r, seed);
+
+  curandState s;
+  curand_init(seed, 0, 0, &s);  // Initialize random number generator
+  float randomFloat = curand_uniform(&s);
+  seed++;
+
+  return ring * randomFloat;
 }

@@ -4,6 +4,7 @@
 #include "helper_math.h"
 #include "helper.cu_inl"
 #include "pattern.cu_inl"
+#include "color.cu_inl"
 #define TX 32
 #define TY 32
 
@@ -131,6 +132,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
   int freeup = 1;
   firework *buffer = reinterpret_cast<firework *>(particles);
   
+  float2 pixel_pos = make_float2((float)c, (float)r);
   if (!((c >= w) || (r >= h))) {
     uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
     for (int i = *buffer_tail; i < *buffer_head; i++) {
@@ -144,7 +146,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
       if (upshoot.explosion_height > 0) {
         // only upshooting particle need display
         float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
-        if (isWithinDistance(p, make_float2((float)c, (float)r), upshoot.r)) {
+        if (isWithinDistance(p, pixel_pos, upshoot.r)) {
           pixel_color = cuPalette[upshoot.color]; // TODO: support particle overlap
         }
       } else {
@@ -153,8 +155,9 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
           particle curr = curr_firework->pack[j];
           if (curr.t_0 < 0) continue;
           float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
-          if (isWithinDistance(p, make_float2((float)c, (float)r), curr.r)) {
-            pixel_color = cuPalette[curr.color]; // TODO: support particle overlap
+          if (isWithinDistance(p, pixel_pos, curr.r)) {
+            // pixel_color = cuPalette[curr.color]; // TODO: support particle overlap
+            colors(pixel_color, t, j, curr);
           }
         }
       }
@@ -164,7 +167,6 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
   if (idx == 0) *buffer_tail += tail_increment;
   __syncthreads();
 
-  // TODO: update particles
   updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
 }
 

@@ -5,7 +5,7 @@
 
 #define W 1200
 #define H 600
-#define MAX_PARTICLE_NUM 32768
+#define MAX_PARTICLE_NUM 65536
 #define MAX_SCHEDULE_NUM 512
 #define TITLE_STRING "firework"
 #define G 9.8f
