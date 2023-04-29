@@ -32,10 +32,10 @@ void pattern2(particle &curr, const float2 p_0, const float t, int offset, unsig
   // blinking particle in a circle
   curr.p_0 = p_0;
   curr.v_0 = random_circle(30.0f, seed);
-  curr.a = make_float2(0.0f, G);
+  curr.a = make_float2(0.0f, G/2.0f);
   curr.r = random_float(4.0f, 1.0f, seed);
   curr.t_0 = t;
-  curr.explosion_height = 5;
+  curr.explosion_height = random_float(8.0f, 5.0f, seed);
   curr.color = 1;
 }
 
@@ -53,17 +53,21 @@ void pattern3(particle &curr, const float2 p_0, const float t, int offset, unsig
 
 __device__
 void pattern4(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
-  // particle in a square
+  // random blinking particle in a circle
   curr.p_0 = p_0;
-  curr.v_0 = make_float2(
-    random_float(-20.0f, 20.0f, seed),
-    random_float(-20.0f, 20.0f, seed)
-  );
-  curr.a = make_float2(0.0f, G);
-  curr.r = 5.0f;
+  curr.v_0 = random_circle(30.0f, seed);
+  curr.a = make_float2(0.0f, G/4.0f);
+  curr.r = random_float(4.0f, 1.0f, seed);
   curr.t_0 = t;
   curr.explosion_height = 5;
   curr.color = random_char(0, 5, seed);
+  if (curr.color == 1) {
+    curr.t_0 += 3.0f;
+    curr.a.y /= 10.0f;
+    curr.explosion_height = random_float(5.0f, 3.0f, seed);
+    curr.p_0 = p_0 + curr.v_0 * 2.5f;
+    curr.v_0 = make_float2(0.0f, 0.0f);
+  }
 }
 
 __device__

@@ -153,7 +153,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
         // firework after explosion
         for (int j = 1; j < PARTICLE_NUM_PER_FIREWORK; j++) {
           particle curr = curr_firework->pack[j];
-          if (curr.t_0 < 0) continue;
+          if (curr.t_0 < 0 || curr.t_0 > t) continue;
           float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
           if (isWithinDistance(p, pixel_pos, curr.r)) {
             // pixel_color = cuPalette[curr.color]; // TODO: support particle overlap
