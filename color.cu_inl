@@ -7,17 +7,21 @@ void color0(uchar4 &pixel_color, const float t) {
   pixel_color.z = 255 - clip(t*204.0f);
 }
 
-
 // need to register patterns in this function
 __device__
 void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr) {
+  uchar4 temp;
   switch (curr.color) {
     case 0:
-      color0(pixel_color, t - curr.t_0);
+      color0(temp, t - curr.t_0);
       break;
     default:
-      color0(pixel_color, t - curr.t_0);
+      color0(temp, t - curr.t_0);
   }
+  pixel_color.x = clip((int)pixel_color.x + (int)temp.x); 
+  pixel_color.y = clip((int)pixel_color.y + (int)temp.y); 
+  pixel_color.z = clip((int)pixel_color.z + (int)temp.z); 
+  pixel_color.w = clip((int)pixel_color.w + (int)temp.w); 
 }
 
 __device__

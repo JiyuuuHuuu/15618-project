@@ -15,7 +15,7 @@ struct int2;
 
 const int PARTICLE_NUM_PER_FIREWORK = MAX_PARTICLE_NUM/MAX_SCHEDULE_NUM; // total number of threads must be multiple of this number
 
-// explostion height is used as delta_t child particles
+// explostion height is used as delta_t for child particles
 struct particle {
   float2 p_0;
   float2 v_0;
