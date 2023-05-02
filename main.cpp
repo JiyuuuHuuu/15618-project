@@ -37,7 +37,7 @@ void CalculateFrameRate()
   ++framesPerSecond;
   if (currentTime - lastTime >= 1000) {
     lastTime = currentTime;
-    printf("Current Frames Per Second: %d\n", (int)framesPerSecond);
+    printf("FPS: %d\n", (int)framesPerSecond);
     framesPerSecond = 0;
   }
 }
@@ -119,15 +119,6 @@ bool check_schedule(particle *particles) {
   return !schedule_invalid;
 }
 
-void handleKeyPress(unsigned char key, int x, int y) {
-  switch (key) {
-    case 'q':
-    case 'Q':
-      exit(0);
-      break;
-  }
-}
-
 void render() {
   uchar4 *d_out = 0;
   CalculateFrameRate();
@@ -171,7 +162,6 @@ void initGLUT(int *argc, char **argv) {
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
   glutInitWindowSize(W, H);
   glutCreateWindow(TITLE_STRING);
-  glutKeyboardFunc(handleKeyPress);
 }
 
 void initPixelBuffer() {
