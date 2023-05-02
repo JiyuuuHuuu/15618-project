@@ -85,3 +85,22 @@ float2 random_circle(float r, unsigned int &seed) {
 
   return ring * randomFloat;
 }
+
+__device__
+float2 random_heart(float x, unsigned int &seed) {
+  float minVal = -1.57f;
+  float maxVal = 1.57f;
+  curandState s;
+  curand_init(seed, 0, 0, &s);  // Initialize random number generator
+  float randomFloat = curand_uniform(&s);
+  randomFloat = (randomFloat * (maxVal - minVal)) + minVal;  // Scale to desired range
+
+  // (0.64*sqrt(abs(x))-0.8+1.2^abs(x)*cos(200*x))*sqrt(cos(x))
+  float tx = randomFloat;
+  float ty = -(0.64 * sqrt(abs(tx)) - 0.8 + pow(1.2, abs(tx)) * cos(200*tx)) * sqrt(cos(tx));
+  float scale = x / 1.57f;
+
+  seed++;
+
+  return make_float2(tx*scale, ty*scale);
+}
