@@ -103,7 +103,7 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
 }
 
 __global__
-void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, int *buffer_head, int *buffer_tail, int *schedule_idx) {
+void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tails, float t, int *buffer_head, int *buffer_tail, int *schedule_idx) {
   const int c = blockIdx.x*blockDim.x + threadIdx.x;
   const int r = blockIdx.y*blockDim.y + threadIdx.y;
   const int idx = c + r*w; // 1D indexing
@@ -117,6 +117,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
   
   float2 pixel_pos = make_float2((float)c, (float)r);
   if (!((c >= w) || (r >= h))) {
+    tail curr_tail = tails[idx];
     uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
     for (int i = *buffer_tail; i < *buffer_head; i++) {
       firework *curr_firework = buffer + i;
@@ -128,23 +129,25 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
       freeup = 0;
       if (upshoot.explosion_height > 0) {
         // only upshooting particle need display
-        float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
-        if (isWithinDistance(p, pixel_pos, upshoot.r)) {
-          pixel_color = cuPalette[upshoot.color]; // TODO: support particle overlap
-        }
+
+        // float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
+        // if (isWithinDistance(p, pixel_pos, upshoot.r)) {
+        //   pixel_color = cuPalette[upshoot.color]; // TODO: support particle overlap
+        // }
+        upshoots(pixel_color, t, 0, upshoot, pixel_pos, curr_tail);
       } else {
         // firework after explosion
         for (int j = 1; j < PARTICLE_NUM_PER_FIREWORK; j++) {
           particle curr = curr_firework->pack[j];
           if (curr.t_0 < 0 || curr.t_0 > t) continue;
-          float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
-          if (isWithinDistance(p, pixel_pos, curr.r)) {
             // pixel_color = cuPalette[curr.color]; // TODO: support particle overlap
-            colors(pixel_color, t, j, curr);
-          }
+          colors(pixel_color, t, j, curr, pixel_pos, curr_tail);
         }
       }
     }
+    tail_colors(pixel_color, t, 0, curr_tail);
+
+    tails[idx] = curr_tail;
     d_out[idx] = pixel_color;
   }
   if (idx == 0) *buffer_tail += tail_increment;
@@ -153,10 +156,10 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, float t, i
   updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
 }
 
-void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, int *idx_holder, float t) {
+void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, tail *tails, int *idx_holder, float t) {
   const dim3 blockSize(TX, TY);
   const dim3 gridSize = dim3((w + TX - 1)/TX, (h + TY - 1)/TY);
-  fireworkKernel<<<gridSize, blockSize>>>(d_out, w, h, particles, t, idx_holder, idx_holder+1, idx_holder+2);
+  fireworkKernel<<<gridSize, blockSize>>>(d_out, w, h, particles, tails, t, idx_holder, idx_holder+1, idx_holder+2);
   cudaError_t cudaStatus = cudaDeviceSynchronize();
   if (cudaStatus != cudaSuccess) {
     printf("CUDA error after cudaDeviceSynchronize: %s\n", cudaGetErrorString(cudaStatus));

@@ -82,6 +82,19 @@ void pattern5(particle &curr, const float2 p_0, const float t, int offset, unsig
   curr.color = random_char(0, 5, seed);
 }
 
+__device__
+void pattern6(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
+  // particle in a circle with tail
+  curr.p_0 = p_0;
+  curr.v_0 = random_circle(30.0f, seed);
+  curr.a = make_float2(0.0f, G);
+  curr.r = 1.0f;
+  curr.t_0 = t;
+  curr.tail = 1;
+  curr.explosion_height = 5;
+  curr.color = 2;
+}
+
 /*
 __device__ FuncPtr patternArray[] = {
   pattern0,
@@ -114,6 +127,9 @@ void patterns(particle &curr, const float2 p_0, const float t, int offset, unsig
       break;
     case 5:
       pattern5(curr, p_0, t, offset, seed);
+      break;
+    case 6:
+      pattern6(curr, p_0, t, offset, seed);
       break;
     default:
       pattern0(curr, p_0, t, offset, seed);

@@ -14,24 +14,24 @@ random.seed(rd_seed)
 
 # Config
 # count of output files
-num_schedule = 6
+num_schedule = 1
 # count of rows
 num_firework = 10
 # particles
 t0_low = 0.0
 t0_high = 15.0
-p0_x_low = 200.0
-p0_x_high = 1000.0
-p0_y_low = 500.0
-p0_y_high = 600.0
+p0_x_low = 100.0
+p0_x_high = 700.0
+p0_y_low = 350.0
+p0_y_high = 390.0
 v0_y_low = -100.0
 v0_y_high = -50.0
-r_low = 5.0
+r_low = 8.0
 r_high = 10.0
-eh_low = 50.0
-eh_high = 450.0
-color_low = 0
-color_high = 5
+eh_low = 100.0
+eh_high = 200.0
+color_low = 5
+color_high = 6
 
 def rd(low, high):
     """Generate a random float inclusively.

@@ -21,6 +21,7 @@ GLuint pbo;
 GLuint tex;
 struct cudaGraphicsResource *cuda_pbo_resource;
 particle *particles_device;
+tail *tails_device;
 int *idx_holder_device;
 float framesPerSecond = 0.0f;
 long long int lastTime = 0, currentTime, startTime;
@@ -124,7 +125,7 @@ void render() {
   CalculateFrameRate();
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
-  kernelLauncher(d_out, W, H, particles_device, idx_holder_device, t);
+  kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t);
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
 }
 
@@ -225,11 +226,13 @@ int main(int argc, char** argv) {
   // particles_host[0].r = 10.0f;
 
   for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
-    particles_host[i].explosion_height = 400.0f;
+    particles_host[i].tail = 1;
   }
 
   setUpSchedule(particles_host);
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
+  cudaMalloc(&tails_device, sizeof(tail) * W * H);
+  cudaMemset(tails_device, 0, sizeof(tail) * W * H);
   cudaMalloc(&idx_holder_device, sizeof(int) * 3);
   cudaMemset(idx_holder_device, 0, sizeof(int) * 3);
 

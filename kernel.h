@@ -3,7 +3,7 @@
 
 #include <cuda_runtime.h>
 
-#define W 600
+#define W 800
 #define H 400
 #define MAX_PARTICLE_NUM 65536
 #define MAX_SCHEDULE_NUM 512
@@ -28,11 +28,16 @@ struct particle {
   unsigned char tail;
 };
 
+struct tail {
+  float t_0;
+  unsigned char color;
+};
+
 struct firework {
   particle pack[PARTICLE_NUM_PER_FIREWORK];
 };
 
-void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, int *idx_holder, float t);
+void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, tail *tails, int *idx_holder, float t);
 
 void makePalette(void);
 void setUpSchedule(particle *particles_host);
