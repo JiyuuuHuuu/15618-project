@@ -72,14 +72,11 @@ void pattern4(particle &curr, const float2 p_0, const float t, int offset, unsig
 
 __device__
 void pattern5(particle &curr, const float2 p_0, const float t, int offset, unsigned int &seed) {
-  // particle in a square
+  // heart
   curr.p_0 = p_0;
-  curr.v_0 = make_float2(
-    random_float(-20.0f, 20.0f, seed),
-    random_float(-20.0f, 20.0f, seed)
-  );
+  curr.v_0 = random_heart(30.0f, seed);
   curr.a = make_float2(0.0f, G);
-  curr.r = 5.0f;
+  curr.r = 3.0f;
   curr.t_0 = t;
   curr.explosion_height = 5;
   curr.color = random_char(0, 5, seed);
