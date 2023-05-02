@@ -23,7 +23,7 @@ struct cudaGraphicsResource *cuda_pbo_resource;
 particle *particles_device;
 int *idx_holder_device;
 float framesPerSecond = 0.0f;
-long long int lastTime = 0, currentTime;
+long long int lastTime = 0, currentTime, startTime;
 
 long long int timeSinceEpochMillisec() {
   using namespace std::chrono;
@@ -147,7 +147,8 @@ void time(int x)
 	{
 		glutPostRedisplay();
 		glutTimerFunc(10, time, 0);
-		t += 0.0166f;
+		// t += 0.0166f;
+    t = ((float)(currentTime - startTime))/1000;
 	}
 } 
 
@@ -239,6 +240,7 @@ int main(int argc, char** argv) {
   glewInit();
   initPixelBuffer();
   printf("start rendering...\n");
+  startTime = timeSinceEpochMillisec();
   glutMainLoop();
   atexit(exitfunc);
   return 0;
