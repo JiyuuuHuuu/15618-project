@@ -5,17 +5,16 @@
 #include "kernel.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <chrono>
 #include <algorithm>
 #include <string>
 #include <fstream>
 #include <sstream>
-
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-int2 loc = {W/2, H/2};
 float t = 0.0f;   //timer
 
 GLuint pbo;
@@ -23,6 +22,25 @@ GLuint tex;
 struct cudaGraphicsResource *cuda_pbo_resource;
 particle *particles_device;
 int *idx_holder_device;
+float framesPerSecond = 0.0f;
+long long int lastTime = 0, currentTime;
+
+long long int timeSinceEpochMillisec() {
+  using namespace std::chrono;
+  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+void CalculateFrameRate()
+{
+  if (!SHOW_FPS) return;
+  currentTime = timeSinceEpochMillisec();
+  ++framesPerSecond;
+  if (currentTime - lastTime >= 1000) {
+    lastTime = currentTime;
+    printf("Current Frames Per Second: %d\n", (int)framesPerSecond);
+    framesPerSecond = 0;
+  }
+}
 
 class CmdParser {
   public:
@@ -103,6 +121,7 @@ bool check_schedule(particle *particles) {
 
 void render() {
   uchar4 *d_out = 0;
+  CalculateFrameRate();
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
   kernelLauncher(d_out, W, H, particles_device, idx_holder_device, t);

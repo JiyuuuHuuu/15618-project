@@ -3,12 +3,13 @@
 
 #include <cuda_runtime.h>
 
-#define W 1200
-#define H 600
+#define W 600
+#define H 400
 #define MAX_PARTICLE_NUM 65536
 #define MAX_SCHEDULE_NUM 512
 #define TITLE_STRING "firework"
 #define G 9.8f
+#define SHOW_FPS 1
 
 struct uchar4;
 struct int2;
@@ -24,13 +25,12 @@ struct particle {
   float t_0;
   float explosion_height;
   unsigned char color;
+  unsigned char tail;
 };
 
 struct firework {
   particle pack[PARTICLE_NUM_PER_FIREWORK];
 };
-
-void kernelLauncher(uchar4 *d_out, int w, int h, int2 pos, float t);
 
 void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, int *idx_holder, float t);
 
