@@ -16,10 +16,10 @@ random.seed(rd_seed)
 # count of output files
 num_schedule = 1
 # count of rows
-num_firework = 30
+num_firework = 256
 # particles
 t0_low = 0.0
-t0_high = 15.0
+t0_high = 150.0
 p0_x_low = 100.0
 p0_x_high = 700.0
 p0_y_low = 350.0

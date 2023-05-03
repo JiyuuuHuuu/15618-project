@@ -95,9 +95,9 @@ bool parseFile(const std::string &file, particle *particles) {
     std::getline(sstream, str, '\n');
     particles[idx].color = (int)atoi(str.c_str());
     idx++;
-    if (idx >= MAX_SCHEDULE_NUM) {
+    if (idx > MAX_SCHEDULE_NUM) {
       // truncate the extra
-      printf("Warning: too many input schedules, truncating tails");
+      printf("Warning: too many input schedules, truncating tails\n");
       break;
     }
   }

@@ -20,7 +20,7 @@ __constant__ uchar4 cuPalette[256];
 __constant__ particle cuSchedule[MAX_SCHEDULE_NUM];
 
 __device__
-void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, float t) {
+void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, int *buffer_tail, float t) {
   // check and copy firework from schedule to work buffer for display
   firework *buffer = reinterpret_cast<firework *>(particles);
   const int blk_idx = blockIdx.y*gridDim.x + blockIdx.x;
@@ -34,7 +34,7 @@ void launchSchedule(particle *particles, int *schedule_idx, int *buffer_head, fl
 
   particle schedule_particle = cuSchedule[idx + schedule_idx_local];
   if (schedule_particle.t_0 >= 0.0f && schedule_particle.t_0 <= t) {
-    printf("move to display\n");
+    if (idx == 0) printf("in display: %d\n", *buffer_head - *buffer_tail);
     buffer[idx + buffer_head_local].pack[0] = schedule_particle;
 
     // update indices
@@ -98,8 +98,6 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
     __syncthreads();
     buffer[i].pack[particle_idx] = curr;
   }
-
-  // TODO: implement circular allocation
 }
 
 __global__
@@ -107,7 +105,7 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tail
   const int c = blockIdx.x*blockDim.x + threadIdx.x;
   const int r = blockIdx.y*blockDim.y + threadIdx.y;
   const int idx = c + r*w; // 1D indexing
-  launchSchedule(particles, schedule_idx, buffer_head, t);
+  launchSchedule(particles, schedule_idx, buffer_head, buffer_tail, t);
   __syncthreads();
 
   // display
@@ -129,11 +127,6 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tail
       freeup = 0;
       if (upshoot.explosion_height > 0) {
         // only upshooting particle need display
-
-        // float2 p = currP(upshoot.p_0, upshoot.v_0, upshoot.a, t - upshoot.t_0);
-        // if (isWithinDistance(p, pixel_pos, upshoot.r)) {
-        //   pixel_color = cuPalette[upshoot.color]; // TODO: support particle overlap
-        // }
         upshoots(pixel_color, t, 0, upshoot, pixel_pos, curr_tail);
       } else {
         // firework after explosion
