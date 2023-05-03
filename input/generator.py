@@ -16,7 +16,7 @@ random.seed(rd_seed)
 # count of output files
 num_schedule = 1
 # count of rows
-num_firework = 10
+num_firework = 30
 # particles
 t0_low = 0.0
 t0_high = 15.0
@@ -25,12 +25,14 @@ p0_x_high = 700.0
 p0_y_low = 350.0
 p0_y_high = 390.0
 v0_y_low = -100.0
-v0_y_high = -50.0
+v0_y_high = -80.0
+v0_x_low = -10.0
+v0_x_high = 10.0
 r_low = 8.0
 r_high = 10.0
-eh_low = 100.0
+eh_low = 50.0
 eh_high = 200.0
-color_low = 5
+color_low = 0
 color_high = 6
 
 def rd(low, high):
@@ -49,7 +51,7 @@ def create(t0):
     """
     p0_x = rd(p0_x_low, p0_x_high)
     p0_y = rd(p0_y_low, p0_y_high)
-    v0_x = '0.00'
+    v0_x = rd(v0_x_low, v0_x_high)
     v0_y = rd(v0_y_low, v0_y_high)
     assert v0_y != '0.00'
     r = rd(r_low, r_high)

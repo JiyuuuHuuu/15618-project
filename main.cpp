@@ -149,7 +149,7 @@ void time(int x)
 		glutPostRedisplay();
 		glutTimerFunc(10, time, 0);
 		// t += 0.0166f;
-    t = ((float)(currentTime - startTime))/1000;
+    t = ((float)(currentTime - startTime))/1000*RATE;
 	}
 } 
 

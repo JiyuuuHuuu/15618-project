@@ -87,6 +87,15 @@ float2 random_circle(float r, unsigned int &seed) {
 }
 
 __device__
+float2 random_sphere(float r, unsigned int &seed) {
+  float u = random_float(0.0f, 1.0f, seed) * 2 * PI;
+  float v = random_float(0.0f, 1.0f, seed) * PI;
+
+  float2 ret = make_float2(cosf(u) * sinf(v), sinf(u) * sinf(v));
+  return ret * r;
+}
+
+__device__
 float2 random_heart(float x, unsigned int &seed) {
   float minVal = -1.57f;
   float maxVal = 1.57f;

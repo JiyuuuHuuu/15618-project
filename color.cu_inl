@@ -1,5 +1,36 @@
+/*Single color*/
 __device__
 void color0(uchar4 &pixel_color, const float t) {
+  // t: should be global t - t_0
+  // decaying red
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(10.2f*t*t);
+  pixel_color.y = 255 - clip(t*204.0f);
+  pixel_color.z = 255 - clip(t*204.0f);
+}
+
+__device__
+void color1(uchar4 &pixel_color, const float t) {
+  // t: should be global t - t_0
+  // decaying green
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*204.0f);
+  pixel_color.y = 255 - clip(10.2f*t*t);
+  pixel_color.z = 255 - clip(t*204.0f);
+}
+
+__device__
+void color2(uchar4 &pixel_color, const float t) {
+  // t: should be global t - t_0
+  // decaying yellow
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*204.0f);
+  pixel_color.y = 255 - clip(t*204.0f);
+  pixel_color.z = 255 - clip(10.2f*t*t);
+}
+
+__device__
+void color3(uchar4 &pixel_color, const float t) {
   // t: should be global t - t_0
   // decaying yellow
   pixel_color.w = 255;
@@ -8,8 +39,45 @@ void color0(uchar4 &pixel_color, const float t) {
   pixel_color.z = 255 - clip(t*204.0f);
 }
 
+/*blinking color*/
 __device__
-void color1(uchar4 &pixel_color, const float t, const int offset) {
+void color20(uchar4 &pixel_color, const float t, const int offset) {
+  // t: should be global t - t_0
+  // blinking red
+  unsigned int seed = (unsigned int)(t*100) + (unsigned int)offset;
+  float b_factor = random_float(255.0f, 0.0f, seed);
+  pixel_color.w = 255;
+  pixel_color.x = 255 - (unsigned char)b_factor;
+  pixel_color.y = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+  pixel_color.z = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+}
+
+__device__
+void color21(uchar4 &pixel_color, const float t, const int offset) {
+  // t: should be global t - t_0
+  // blinking green
+  unsigned int seed = (unsigned int)(t*100) + (unsigned int)offset;
+  float b_factor = random_float(255.0f, 0.0f, seed);
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+  pixel_color.y = 255 - (unsigned char)b_factor;
+  pixel_color.z = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+}
+
+__device__
+void color22(uchar4 &pixel_color, const float t, const int offset) {
+  // t: should be global t - t_0
+  // blinking blue
+  unsigned int seed = (unsigned int)(t*100) + (unsigned int)offset;
+  float b_factor = random_float(255.0f, 0.0f, seed);
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+  pixel_color.y = 255 - clip(t*204.0f) - (unsigned char)b_factor;
+  pixel_color.z = 255 - (unsigned char)b_factor;
+}
+
+__device__
+void color23(uchar4 &pixel_color, const float t, const int offset) {
   // t: should be global t - t_0
   // blinking yellow
   unsigned int seed = (unsigned int)(t*100) + (unsigned int)offset;
@@ -20,16 +88,53 @@ void color1(uchar4 &pixel_color, const float t, const int offset) {
   pixel_color.z = 255 - clip(t*204.0f) - (unsigned char)b_factor;
 }
 
+/*Color w tails*/
 __device__
-void color2(uchar4 &pixel_color, const float t, const int offset, tail &curr_tail,const particle &curr) {
+void color40(uchar4 &pixel_color, const float t, const int offset, tail &curr_tail, const particle &curr) {
   // t: should be global t - t_0
   // red with tails
   pixel_color.w = 255;
   pixel_color.x = 255 - clip(10.2f*t*t - 20.4f);
   pixel_color.y = 255 - clip(t*104.0f);
   pixel_color.z = 255 - clip(t*104.0f);
-  curr_tail.color = curr.tail;
-  curr_tail.t_0 = 0.5f*t + curr.t_0;
+  curr_tail.color = 1;
+  curr_tail.t_0 = 0.7f*t + curr.t_0;
+}
+
+__device__
+void color41(uchar4 &pixel_color, const float t, const int offset, tail &curr_tail, const particle &curr) {
+  // t: should be global t - t_0
+  // green with tails
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*104.0f);
+  pixel_color.y = 255 - clip(10.2f*t*t - 20.4f);
+  pixel_color.z = 255 - clip(t*104.0f);
+  curr_tail.color = 2;
+  curr_tail.t_0 = 0.7f*t + curr.t_0;
+}
+
+__device__
+void color42(uchar4 &pixel_color, const float t, const int offset, tail &curr_tail, const particle &curr) {
+  // t: should be global t - t_0
+  // blue with tails
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(t*104.0f);
+  pixel_color.y = 255 - clip(t*104.0f);
+  pixel_color.z = 255 - clip(10.2f*t*t - 20.4f);
+  curr_tail.color = 3;
+  curr_tail.t_0 = 0.7f*t + curr.t_0;
+}
+
+__device__
+void color43(uchar4 &pixel_color, const float t, const int offset, tail &curr_tail, const particle &curr) {
+  // t: should be global t - t_0
+  // yellow with tails
+  pixel_color.w = 255;
+  pixel_color.x = 255 - clip(10.2f*t*t - 20.4f);
+  pixel_color.y = 255 - clip(10.2f*t*t - 20.4f);
+  pixel_color.z = 255 - clip(t*104.0f);
+  curr_tail.color = 4;
+  curr_tail.t_0 = 0.7f*t + curr.t_0;
 }
 
 // need to register patterns in this function
@@ -43,10 +148,37 @@ void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr
       color0(temp, t - curr.t_0);
       break;
     case 1:
-      color1(temp, t - curr.t_0, offset);
+      color1(temp, t - curr.t_0);
       break;
     case 2:
-      color2(temp, t - curr.t_0, offset, curr_tail, curr);
+      color2(temp, t - curr.t_0);
+      break;
+    case 3:
+      color3(temp, t - curr.t_0);
+      break;
+    case 20:
+      color20(temp, t - curr.t_0, offset);
+      break;
+    case 21:
+      color21(temp, t - curr.t_0, offset);
+      break;
+    case 22:
+      color22(temp, t - curr.t_0, offset);
+      break;
+    case 23:
+      color23(temp, t - curr.t_0, offset);
+      break;
+    case 40:
+      color40(temp, t - curr.t_0, offset, curr_tail, curr);
+      break;
+    case 41:
+      color41(temp, t - curr.t_0, offset, curr_tail, curr);
+      break;
+    case 42:
+      color42(temp, t - curr.t_0, offset, curr_tail, curr);
+      break;
+    case 43:
+      color43(temp, t - curr.t_0, offset, curr_tail, curr);
       break;
     default:
       color0(temp, t - curr.t_0);
@@ -59,6 +191,7 @@ void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr
 
 __device__
 void upshoot0(uchar4 &pixel_color, const float t, const float center_dist, const particle &curr, tail &curr_tail) {
+  // red upshoot
   if (center_dist <= curr.r * 0.1) {
     pixel_color.x = 255;
     pixel_color.y = 255;
@@ -97,8 +230,36 @@ void upshoots(uchar4 &pixel_color, const float t, int offset, const particle &cu
 
 __device__
 void tail1(uchar4 &pixel_color, const float t) {
+  // red tail
   pixel_color.x = 255 - clip(30.2f*t*t);
   pixel_color.y = 255 - clip(t*104.0f);
+  pixel_color.z = 255 - clip(t*104.0f);
+  pixel_color.w = 255;
+}
+
+__device__
+void tail2(uchar4 &pixel_color, const float t) {
+  // green tail
+  pixel_color.x = 255 - clip(t*104.0f);
+  pixel_color.y = 255 - clip(30.2f*t*t);
+  pixel_color.z = 255 - clip(t*104.0f);
+  pixel_color.w = 255;
+}
+
+__device__
+void tail3(uchar4 &pixel_color, const float t) {
+  // blue tail
+  pixel_color.x = 255 - clip(t*104.0f);
+  pixel_color.y = 255 - clip(t*104.0f);
+  pixel_color.z = 255 - clip(30.2f*t*t);
+  pixel_color.w = 255;
+}
+
+__device__
+void tail4(uchar4 &pixel_color, const float t) {
+  // yellow tail
+  pixel_color.x = 255 - clip(30.2f*t*t);
+  pixel_color.y = 255 - clip(30.2f*t*t);
   pixel_color.z = 255 - clip(t*104.0f);
   pixel_color.w = 255;
 }
@@ -110,6 +271,15 @@ void tail_colors(uchar4 &pixel_color, const float t, int offset, const tail &cur
   switch (curr_tail.color) {
     case 1:
       tail1(temp, t - curr_tail.t_0);
+      break;
+    case 2:
+      tail2(temp, t - curr_tail.t_0);
+      break;
+    case 3:
+      tail3(temp, t - curr_tail.t_0);
+      break;
+    case 4:
+      tail4(temp, t - curr_tail.t_0);
       break;
     default:
       break;

@@ -6,9 +6,11 @@
 #define W 800
 #define H 400
 #define MAX_PARTICLE_NUM 65536
-#define MAX_SCHEDULE_NUM 512
+#define MAX_SCHEDULE_NUM 256
 #define TITLE_STRING "firework"
 #define G 9.8f
+#define RATE 0.7f
+#define PI 3.1415926f
 #define SHOW_FPS 1
 
 struct uchar4;
