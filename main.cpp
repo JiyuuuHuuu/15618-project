@@ -25,6 +25,7 @@ tail *tails_device;
 int *idx_holder_device;
 float framesPerSecond = 0.0f;
 long long int lastTime = 0, currentTime, startTime;
+int rand_generate = 0;
 
 long long int timeSinceEpochMillisec() {
   using namespace std::chrono;
@@ -125,7 +126,11 @@ void render() {
   CalculateFrameRate();
   cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
   cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
+#ifndef FIREWORK_BUFFER_SIZE
   kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t);
+#else
+  kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t, rand_generate);
+#endif
   cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
 }
 
@@ -206,11 +211,19 @@ int main(int argc, char** argv) {
   CmdParser cmd_parser(argc, argv);
   std::string file = cmd_parser.GetOption("-f");
   // Parse file.
+#ifndef FIREWORK_BUFFER_SIZE
   if (!file.empty()) {
     parseFile(file, particles_host);
   } else {
     parseFile("./input/s000.csv", particles_host);
   }
+#else
+  if (!file.empty()) {
+    parseFile(file, particles_host);
+  } else {
+    rand_generate = 1;
+  }
+#endif
   // Validate schedule.
   if (!check_schedule(particles_host)) {
     printf("Error: invalid schedule\n");
@@ -230,7 +243,11 @@ int main(int argc, char** argv) {
   }
 
   setUpSchedule(particles_host);
+#ifndef FIREWORK_BUFFER_SIZE
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
+#else
+  cudaMalloc(&particles_device, sizeof(firework) * FIREWORK_BUFFER_SIZE);
+#endif
   cudaMalloc(&tails_device, sizeof(tail) * W * H);
   cudaMemset(tails_device, 0, sizeof(tail) * W * H);
   cudaMalloc(&idx_holder_device, sizeof(int) * 3);
@@ -242,7 +259,12 @@ int main(int argc, char** argv) {
   time(0);
   glewInit();
   initPixelBuffer();
+#ifndef FIREWORK_BUFFER_SIZE
   printf("start rendering...\n");
+#else
+  if (rand_generate) printf("start rendering random...\n");
+  else printf("start rendering...\n");
+#endif
   startTime = timeSinceEpochMillisec();
   glutMainLoop();
   atexit(exitfunc);

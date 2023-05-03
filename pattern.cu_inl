@@ -57,7 +57,7 @@ void pattern4(particle &curr, const float2 p_0, const float t, int offset, unsig
   curr.p_0 = p_0;
   curr.v_0 = random_sphere(30.0f, seed);
   curr.a = make_float2(0.0f, G/3.0f);
-  curr.r = random_float(1.0f, 4.0f, seed);
+  curr.r = random_float(1.0f, 3.0f, seed);
   curr.t_0 = t+0.3;
   curr.explosion_height = 5;
   curr.color = random_char(0, 2, seed);
@@ -65,7 +65,7 @@ void pattern4(particle &curr, const float2 p_0, const float t, int offset, unsig
     curr.color = random_char(20, 23, seed);
     curr.t_0 += 3.0f;
     curr.explosion_height = random_float(1.0f, 3.0f, seed);
-    curr.p_0 = p_0 + curr.v_0 * 2.5f;
+    curr.p_0 = p_0 + curr.v_0 * 3.0f;
     curr.v_0 = make_float2(0.0f, 0.0f);
   } else {
     curr.color = random_char(0, 2, seed);

@@ -212,7 +212,7 @@ __device__
 void upshoots(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {
   float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
   float center_dist = getDistance(pixel_pos, p);
-  if (center_dist > curr.r) {return;}
+  if (center_dist > curr.r || curr.t_0 > t) {return;}
   uchar4 temp;
   switch (curr.color) {
     case 0:
