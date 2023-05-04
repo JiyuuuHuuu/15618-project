@@ -1,3 +1,41 @@
+__device__
+void upshoot0(uchar4 &pixel_color, const float t, const float center_dist, const particle &curr, tail &curr_tail) {
+  // red upshoot
+  if (center_dist <= curr.r * 0.1) {
+    pixel_color.x = 255;
+    pixel_color.y = 255;
+    pixel_color.z = 255;
+    pixel_color.w = 255;
+    curr_tail.color = curr.tail;
+    curr_tail.t_0 = t + curr.t_0;
+  } else {
+    pixel_color.x = 255 - clip((center_dist/curr.r - 0.15f)*255.0f);
+    pixel_color.y = 0;
+    pixel_color.z = 0;
+    pixel_color.w = 255;
+  }
+}
+
+__device__
+void upshoots(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {
+  float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
+  float center_dist = getDistance(pixel_pos, p);
+  if (center_dist > curr.r || curr.t_0 > t) {return;}
+  uchar4 temp;
+  switch (curr.color) {
+    case 0:
+      upshoot0(temp, t - curr.t_0, center_dist, curr, curr_tail);
+      break;
+    default:
+      upshoot0(temp, t - curr.t_0, center_dist, curr, curr_tail);
+  }
+  pixel_color.x = clip((int)pixel_color.x + (int)temp.x); 
+  pixel_color.y = clip((int)pixel_color.y + (int)temp.y); 
+  pixel_color.z = clip((int)pixel_color.z + (int)temp.z); 
+  pixel_color.w = clip((int)pixel_color.w + (int)temp.w); 
+}
+
+
 /*Single color*/
 __device__
 void color0(uchar4 &pixel_color, const float t) {
@@ -141,6 +179,7 @@ void color43(uchar4 &pixel_color, const float t, const int offset, tail &curr_ta
 __device__
 void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {
   float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
+  float center_dist = getDistance(pixel_pos, p);
   if (!isWithinDistance(p, pixel_pos, curr.r)) {return;}
   uchar4 temp;
   switch (curr.color) {
@@ -180,6 +219,9 @@ void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr
     case 43:
       color43(temp, t - curr.t_0, offset, curr_tail, curr);
       break;
+    case 200:
+      upshoot0(temp, t - curr.t_0, center_dist, curr, curr_tail);
+      break;
     default:
       color0(temp, t - curr.t_0);
   }
@@ -188,45 +230,6 @@ void colors(uchar4 &pixel_color, const float t, int offset, const particle &curr
   pixel_color.z = clip((int)pixel_color.z + (int)temp.z); 
   pixel_color.w = clip((int)pixel_color.w + (int)temp.w); 
 }
-
-__device__
-void upshoot0(uchar4 &pixel_color, const float t, const float center_dist, const particle &curr, tail &curr_tail) {
-  // red upshoot
-  if (center_dist <= curr.r * 0.1) {
-    pixel_color.x = 255;
-    pixel_color.y = 255;
-    pixel_color.z = 255;
-    pixel_color.w = 255;
-    curr_tail.color = curr.tail;
-    curr_tail.t_0 = t + curr.t_0;
-  } else {
-    pixel_color.x = 255 - clip((center_dist/curr.r - 0.15f)*255.0f);
-    pixel_color.y = 0;
-    pixel_color.z = 0;
-    pixel_color.w = 255;
-  }
-}
-
-
-__device__
-void upshoots(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {
-  float2 p = currP(curr.p_0, curr.v_0, curr.a, t - curr.t_0);
-  float center_dist = getDistance(pixel_pos, p);
-  if (center_dist > curr.r || curr.t_0 > t) {return;}
-  uchar4 temp;
-  switch (curr.color) {
-    case 0:
-      upshoot0(temp, t - curr.t_0, center_dist, curr, curr_tail);
-      break;
-    default:
-      upshoot0(temp, t - curr.t_0, center_dist, curr, curr_tail);
-  }
-  pixel_color.x = clip((int)pixel_color.x + (int)temp.x); 
-  pixel_color.y = clip((int)pixel_color.y + (int)temp.y); 
-  pixel_color.z = clip((int)pixel_color.z + (int)temp.z); 
-  pixel_color.w = clip((int)pixel_color.w + (int)temp.w); 
-}
-
 
 __device__
 void tail1(uchar4 &pixel_color, const float t) {

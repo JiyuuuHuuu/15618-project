@@ -4,6 +4,27 @@ unsigned char clip(int n) { return n > 255 ? 255 : (n < 0 ? 0 : n); }
 __device__
 unsigned char clip(float n) { return n > 255.0f ? 255 : (n < 0.0f ? 0 : (unsigned char)n); }
 
+__device__ __inline__ int
+circleInBox(
+  float circleX, float circleY, float circleRadius,
+  float boxL, float boxR, float boxT, float boxB)
+{
+  // clamp circle center to box (finds the closest point on the box)
+  float closestX = (circleX > boxL) ? ((circleX < boxR) ? circleX : boxR) : boxL;
+  float closestY = (circleY > boxB) ? ((circleY < boxT) ? circleY : boxT) : boxB;
+
+  // is circle radius less than the distance to the closest point on
+  // the box?
+  float distX = closestX - circleX;
+  float distY = closestY - circleY;
+
+  if ( ((distX*distX) + (distY*distY)) <= (circleRadius*circleRadius) ) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 __device__
 int isWithinDistance(float2 p_0, float2 p_1, float d) {
   float distX = p_0.x - p_1.x;

@@ -3,6 +3,10 @@
 
 #include <cuda_runtime.h>
 
+#define TX 32
+#define TY 32
+#define BLK_SIZE TX * TY
+#define SCAN_BLOCK_DIM   BLK_SIZE
 #define W 800
 #define H 400
 #define MAX_PARTICLE_NUM 65536

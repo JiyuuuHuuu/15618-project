@@ -1,7 +1,3 @@
-// Entry point of fireworks
-// Usage:
-//   ./firework -f ./input/s000.txt
-
 #include "kernel.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,19 +6,16 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <GL/glew.h>
-#include <GL/freeglut.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-float t = 0.0f;   //timer
+#define DURATION 10
 
-GLuint pbo;
-GLuint tex;
-struct cudaGraphicsResource *cuda_pbo_resource;
+float t = 0.0f;
 particle *particles_device;
 tail *tails_device;
 int *idx_holder_device;
+uchar4 *d_out;
 float framesPerSecond = 0.0f;
 long long int lastTime = 0, currentTime, startTime;
 int rand_generate = 0;
@@ -121,73 +114,6 @@ bool check_schedule(particle *particles) {
   return !schedule_invalid;
 }
 
-void render() {
-  uchar4 *d_out = 0;
-  CalculateFrameRate();
-  cudaGraphicsMapResources(1, &cuda_pbo_resource, 0);
-  cudaGraphicsResourceGetMappedPointer((void **)&d_out, NULL, cuda_pbo_resource);
-#ifndef FIREWORK_BUFFER_SIZE
-  kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t);
-#else
-  kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t, rand_generate);
-#endif
-  cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0);
-}
-
-void drawTexture() {
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, W, H, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, NULL);
-  glEnable(GL_TEXTURE_2D);
-  glBegin(GL_QUADS);
-  glTexCoord2f(0.0f, 0.0f); glVertex2f(0, 0);
-  glTexCoord2f(0.0f, 1.0f); glVertex2f(0, H);
-  glTexCoord2f(1.0f, 1.0f); glVertex2f(W, H);
-  glTexCoord2f(1.0f, 0.0f); glVertex2f(W, 0);
-  glEnd();
-  glDisable(GL_TEXTURE_2D);
-}
-
-void time(int x) 
-{
-	if (glutGetWindow() )
-	{
-		glutPostRedisplay();
-		glutTimerFunc(10, time, 0);
-		// t += 0.0166f;
-    t = ((float)(currentTime - startTime))/1000*RATE;
-	}
-} 
-
-void display() {
-  render();
-  drawTexture();
-  glutSwapBuffers();
-}
-
-void initGLUT(int *argc, char **argv) {
-  glutInit(argc, argv);
-  glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
-  glutInitWindowSize(W, H);
-  glutCreateWindow(TITLE_STRING);
-}
-
-void initPixelBuffer() {
-  glGenBuffers(1, &pbo);
-  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-  glBufferData(GL_PIXEL_UNPACK_BUFFER, 4*W*H*sizeof(GLubyte), 0, GL_STREAM_DRAW);
-  glGenTextures(1, &tex);
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, pbo, cudaGraphicsMapFlagsWriteDiscard);
-}
-
-void exitfunc() {
-  if (pbo) {
-    cudaGraphicsUnregisterResource(cuda_pbo_resource);
-    glDeleteBuffers(1, &pbo);
-    glDeleteTextures(1, &tex);
-  }
-}
 
 int main(int argc, char** argv) {
   makePalette();
@@ -244,21 +170,18 @@ int main(int argc, char** argv) {
   cudaMemset(tails_device, 0, sizeof(tail) * W * H);
   cudaMalloc(&idx_holder_device, sizeof(int) * 3);
   cudaMemset(idx_holder_device, 0, sizeof(int) * 3);
+  cudaMalloc(&d_out, sizeof(uchar4) * W * H);
 
-  initGLUT(&argc, argv);
-  gluOrtho2D(0, W, H, 0);
-  glutDisplayFunc(display);
-  time(0);
-  glewInit();
-  initPixelBuffer();
-#ifndef FIREWORK_BUFFER_SIZE
-  printf("start rendering...\n");
-#else
-  if (rand_generate) printf("start rendering random...\n");
-  else printf("start rendering...\n");
-#endif
   startTime = timeSinceEpochMillisec();
-  glutMainLoop();
-  atexit(exitfunc);
+  float counter = 0;
+  while(timeSinceEpochMillisec() - startTime < DURATION * 1000) {
+#ifndef FIREWORK_BUFFER_SIZE
+    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t);
+#else
+    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t, rand_generate);
+#endif
+    counter++;
+  }
+  printf("fps = %d\n", (int)(counter/(float)DURATION));
   return 0;
 }
