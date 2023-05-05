@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "seq.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <chrono>
@@ -7,9 +8,8 @@
 #include <fstream>
 #include <sstream>
 #include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
 
-#define DURATION 10
+#define DURATION 30
 
 float t = 0.0f;
 particle *particles_device;
@@ -119,17 +119,17 @@ int main(int argc, char** argv) {
   makePalette();
 
   // initiate CUDA mem
-  particle *particles_host;
-  particles_host = (particle *)malloc(MAX_SCHEDULE_NUM*sizeof(particle));
+  particle *schedule_host;
+  schedule_host = (particle *)malloc(MAX_SCHEDULE_NUM*sizeof(particle));
 
   for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
-    particles_host[i].t_0 = -1.0f;
-    particles_host[i].p_0 = make_float2(0.0f, 0.0f);
-    particles_host[i].v_0 = make_float2(0.0f, 0.0f);
-    particles_host[i].a = make_float2(0.0f, 0.0f);
-    particles_host[i].r = 0.0f;
-    particles_host[i].explosion_height = 0.0f;
-    particles_host[i].color = 0;
+    schedule_host[i].t_0 = -1.0f;
+    schedule_host[i].p_0 = make_float2(0.0f, 0.0f);
+    schedule_host[i].v_0 = make_float2(0.0f, 0.0f);
+    schedule_host[i].a = make_float2(0.0f, 0.0f);
+    schedule_host[i].r = 0.0f;
+    schedule_host[i].explosion_height = 0.0f;
+    schedule_host[i].color = 0;
   }
 
   // Parse command line arguments.
@@ -139,28 +139,28 @@ int main(int argc, char** argv) {
   // Parse file.
 #ifndef FIREWORK_BUFFER_SIZE
   if (!file.empty()) {
-    parseFile(file, particles_host);
+    parseFile(file, schedule_host);
   } else {
-    parseFile("./input/s000.csv", particles_host);
+    parseFile("./input/s000.csv", schedule_host);
   }
 #else
   if (!file.empty()) {
-    parseFile(file, particles_host);
+    parseFile(file, schedule_host);
   } else {
     rand_generate = 1;
   }
 #endif
   // Validate schedule.
-  if (!check_schedule(particles_host)) {
+  if (!check_schedule(schedule_host)) {
     printf("Error: invalid schedule\n");
     return 1;
   }
 
   for (int i = 0; i < MAX_SCHEDULE_NUM; i++) {
-    particles_host[i].tail = 1;
+    schedule_host[i].tail = 1;
   }
 
-  setUpSchedule(particles_host);
+  setUpSchedule(schedule_host);
 #ifndef FIREWORK_BUFFER_SIZE
   cudaMalloc(&particles_device, sizeof(particle) * MAX_PARTICLE_NUM);
 #else
@@ -176,12 +176,31 @@ int main(int argc, char** argv) {
   float counter = 0;
   while(timeSinceEpochMillisec() - startTime < DURATION * 1000) {
 #ifndef FIREWORK_BUFFER_SIZE
-    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t);
+    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, float(timeSinceEpochMillisec() - startTime)/1000.0f);
 #else
-    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, t, rand_generate);
+    kernelLauncher(d_out, W, H, particles_device, tails_device, idx_holder_device, float(timeSinceEpochMillisec() - startTime)/1000.0f, rand_generate);
 #endif
     counter++;
   }
-  printf("fps = %d\n", (int)(counter/(float)DURATION));
+  printf("fps cuda = %d\n", (int)(counter/(float)DURATION));
+
+#ifndef FIREWORK_BUFFER_SIZE
+  uchar4 *d_host = (uchar4*)malloc(sizeof(uchar4) * W * H);
+  particle *particle_host = (particle*)malloc(sizeof(uchar4) * W * H);
+  tail *tail_host = (tail*)malloc(sizeof(tail) * W * H);
+  int idx_holder_host[3];
+  idx_holder_host[0] = 0;
+  idx_holder_host[1] = 0;
+  idx_holder_host[2] = 0;
+
+  startTime = timeSinceEpochMillisec();
+  counter = 0;
+  while(timeSinceEpochMillisec() - startTime < DURATION * 1000) {
+    seqLauncher(d_host, W, H, particle_host, tail_host, idx_holder_host, float(timeSinceEpochMillisec() - startTime)/1000.0f, schedule_host);
+    counter++;
+    // printf("%d %d\n", idx_holder_host[1], idx_holder_host[0]);
+  }
+   printf("fps sequential = %d\n", (int)(counter/(float)DURATION));
+#endif
   return 0;
 }

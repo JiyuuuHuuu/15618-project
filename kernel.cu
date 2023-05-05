@@ -282,6 +282,7 @@ void updateParticle(particle *particles, int *schedule_idx, int *buffer_head, in
   buffer[buffer_idx % FIREWORK_BUFFER_SIZE].pack[particle_idx] = curr;
 }
 
+#ifndef BATCH
 __global__
 void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tails, float t, int *buffer_head, int *buffer_tail, int *schedule_idx, int rand_generate) {
   const int c = blockIdx.x*blockDim.x + threadIdx.x;
@@ -333,109 +334,115 @@ void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tail
 
   updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
 }
+#else
+__global__
+void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tails, float t, int *buffer_head, int *buffer_tail, int *schedule_idx, int rand_generate) {
+  const int c = blockIdx.x*blockDim.x + threadIdx.x;
+  const int r = blockIdx.y*blockDim.y + threadIdx.y;
+  const int idx = c + r*w; // 1D indexing
 
-// __global__
-// void fireworkKernel(uchar4 *d_out, int w, int h, particle *particles, tail *tails, float t, int *buffer_head, int *buffer_tail, int *schedule_idx, int rand_generate) {
-//   const int c = blockIdx.x*blockDim.x + threadIdx.x;
-//   const int r = blockIdx.y*blockDim.y + threadIdx.y;
-//   const int idx = c + r*w; // 1D indexing
+  const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-//   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  const float boxL = static_cast<float>(blockIdx.x * blockDim.x);
+  const float boxR = static_cast<float>((blockIdx.x + 1) * blockDim.x);
+  const float boxB = static_cast<float>(blockIdx.y * blockDim.y);
+  const float boxT = static_cast<float>((blockIdx.y + 1) * blockDim.y);
 
-//   const float boxL = (static_cast<float>(blockIdx.x * blockDim.x));
-//   const float boxR = (static_cast<float>((blockIdx.x + 1) * blockDim.x));
-//   const float boxB = (static_cast<float>(blockIdx.y * blockDim.y));
-//   const float boxT = (static_cast<float>((blockIdx.y + 1) * blockDim.y));
+  // if (idx == 800) printf("%f %f %f %f\n", boxL, boxR, boxB, boxT);
 
-//   __shared__ uint prefixSumInput[BLK_SIZE];
-//   __shared__ uint prefixSumOutput[BLK_SIZE];
-//   __shared__ uint prefixSumScratch[2 * BLK_SIZE];
-//   // __shared__ float2 sharedPBuffer[BLK_SIZE];
-//   // __shared__ float2 sharedVBuffer[BLK_SIZE];
-//   __shared__ unsigned char sharedColor[BLK_SIZE];
-//   __shared__ short existPIdx[BLK_SIZE];
+  __shared__ uint prefixSumInput[BLK_SIZE];
+  __shared__ uint prefixSumOutput[BLK_SIZE];
+  __shared__ uint prefixSumScratch[2 * BLK_SIZE];
+  // __shared__ float2 sharedPBuffer[BLK_SIZE];
+  // __shared__ float2 sharedVBuffer[BLK_SIZE];
+  __shared__ unsigned char sharedColor[BLK_SIZE];
+  __shared__ uint existPIdx[BLK_SIZE];
 
-//   if (rand_generate)
-//     launchScheduleRandom(particles, buffer_head, buffer_tail, t);
-//   else
-//     launchSchedule(particles, schedule_idx, buffer_head, buffer_tail, t);
-//   __syncthreads();
+  if (rand_generate)
+    launchScheduleRandom(particles, buffer_head, buffer_tail, t);
+  else
+    launchSchedule(particles, schedule_idx, buffer_head, buffer_tail, t);
+  __syncthreads();
 
-//   // display
-//   // int tail_increment = 0;
-//   // int freeup = 1;
-//   float2 pixel_pos = make_float2((float)c, (float)r);
-//   firework *buffer = reinterpret_cast<firework *>(particles);
-//   int buffer_head_local = *buffer_head;
-//   int buffer_tail_local = *buffer_tail;
-//   int ttl_particle_cnt = (buffer_head_local - buffer_tail_local) * PARTICLE_NUM_PER_FIREWORK;
+  // display
+  // int tail_increment = 0;
+  // int freeup = 1;
+  float2 pixel_pos = make_float2((float)c, (float)r);
+  firework *buffer = reinterpret_cast<firework *>(particles);
+  int buffer_head_local = *buffer_head;
+  int buffer_tail_local = *buffer_tail;
+  int ttl_particle_cnt = (buffer_head_local - buffer_tail_local) * PARTICLE_NUM_PER_FIREWORK;
 
-//   tail curr_tail;
-//   if (!((c >= w) || (r >= h))) curr_tail = tails[idx];
-//   uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
-//   for (int batch_offset = 0; batch_offset < ttl_particle_cnt; batch_offset += BLK_SIZE) {
-//     int particle_idx = (tid + batch_offset + buffer_tail_local * PARTICLE_NUM_PER_FIREWORK) %
-//                        (FIREWORK_BUFFER_SIZE * PARTICLE_NUM_PER_FIREWORK);
-//     if (tid + batch_offset < ttl_particle_cnt) {
-//       int firework_idx = particle_idx / PARTICLE_NUM_PER_FIREWORK;
-//       int pack_idx = particle_idx % PARTICLE_NUM_PER_FIREWORK;
-//       int upshoot_idx = tid - tid % PARTICLE_NUM_PER_FIREWORK;
+  tail curr_tail;
+  if (!((c >= w) || (r >= h))) curr_tail = tails[idx];
+  uchar4 pixel_color = make_uchar4(0, 0, 0, 255);
+  for (int batch_offset = 0; batch_offset < ttl_particle_cnt; batch_offset += BLK_SIZE) {
+    int particle_idx = (tid + batch_offset + buffer_tail_local * PARTICLE_NUM_PER_FIREWORK) %
+                       (FIREWORK_BUFFER_SIZE * PARTICLE_NUM_PER_FIREWORK);
+    if (tid + batch_offset < ttl_particle_cnt) {
+      int firework_idx = particle_idx / PARTICLE_NUM_PER_FIREWORK;
+      int pack_idx = particle_idx % PARTICLE_NUM_PER_FIREWORK;
+      int upshoot_idx = tid - tid % PARTICLE_NUM_PER_FIREWORK;
 
-//       particle curr = buffer[firework_idx].pack[pack_idx];
-//       particle upshoot = buffer[firework_idx].pack[upshoot_idx];
-//       // sharedPBuffer[tid] = curr.p_0;
-//       // sharedVBuffer[tid] = curr.v_0;
-//       // sharedABuffer[tid] = curr.a;
+      particle curr = buffer[firework_idx].pack[pack_idx];
+      particle upshoot = buffer[firework_idx].pack[upshoot_idx];
+      // sharedPBuffer[tid] = curr.p_0;
+      // sharedVBuffer[tid] = curr.v_0;
+      // sharedABuffer[tid] = curr.a;
 
-//       float2 p_t = currP(curr.p_0, curr.v_0, curr.a, t);
+      float2 p_t = currP(curr.p_0, curr.v_0, curr.a, t);
 
-//       int to_include = 0;
-//       if (circleInBox(p_t.x, p_t.y, curr.r, boxL, boxR, boxT, boxB) &&
-//           (curr.t_0 >= 0) && (curr.t_0 <= t))
-//         to_include = 1;
-//       if (tid == upshoot_idx) {
-//         curr.color = 200;
-//         if (curr.explosion_height <= 0) to_include = 0;
-//       } else {
-//         if (upshoot.explosion_height > 0) to_include = 0;
-//       }
-//       sharedColor[tid] = curr.color;
-//       prefixSumInput[tid] = 1;
-//     }
-//     __syncthreads();
+      int to_include = 0;
+      if (circleInBox(p_t.x, p_t.y, curr.r, boxL, boxR, boxT, boxB) &&
+          (curr.t_0 >= 0) && (curr.t_0 <= t))
+        to_include = 1;
+      if (tid == upshoot_idx) {
+        curr.color = 200;
+        if (curr.explosion_height <= 0) to_include = 0;
+      } else {
+        if (upshoot.explosion_height > 0) to_include = 0;
+      }
+      sharedColor[tid] = curr.color;
+      prefixSumInput[tid] = to_include;
+    }
+    __syncthreads();
 
-//     sharedMemExclusiveScan(tid, prefixSumInput, prefixSumOutput, prefixSumScratch, BLK_SIZE);
-//     __syncthreads();
+    sharedMemExclusiveScan(tid, prefixSumInput, prefixSumOutput, prefixSumScratch, BLK_SIZE);
+    __syncthreads();
 
-//     int particle_cnt = prefixSumOutput[BLK_SIZE-1] + prefixSumInput[BLK_SIZE-1];
-//     if (batch_offset + BLK_SIZE >= ttl_particle_cnt)
-//       particle_cnt = prefixSumOutput[ttl_particle_cnt - batch_offset];
+    int particle_cnt = prefixSumOutput[BLK_SIZE-1] + prefixSumInput[BLK_SIZE-1];
+    if (batch_offset + BLK_SIZE >= ttl_particle_cnt)
+      particle_cnt = prefixSumOutput[ttl_particle_cnt - batch_offset];
 
-//     // if (particle_cnt != 0) printf("%d\n", particle_cnt);
-//     // if (tid == 0) printf("%d\n", particle_cnt);
+    // if (particle_cnt != 0) printf("%d\n", particle_cnt);
 
-//     if (prefixSumInput[tid] && tid + batch_offset < ttl_particle_cnt)
-//       existPIdx[prefixSumOutput[tid]] = tid;
-//     __syncthreads();
+    if (prefixSumInput[tid] && tid + batch_offset < ttl_particle_cnt)
+      existPIdx[prefixSumOutput[tid]] = tid;
+    __syncthreads();
 
-//     if (!((c >= w) || (r >= h))) {
-//       for (int i = 0; i < particle_cnt; i++) {
-//         particle curr = particles[(existPIdx[i] + batch_offset + buffer_tail_local * PARTICLE_NUM_PER_FIREWORK) %
-//         (FIREWORK_BUFFER_SIZE * PARTICLE_NUM_PER_FIREWORK)];
-//         curr.color = sharedColor[existPIdx[i]];
-//         colors(pixel_color, t, 0, curr, pixel_pos, curr_tail);
-//       }
-//     }
-//   }
-//
-//   if (!((c >= w) || (r >= h))) {
-//     tail_colors(pixel_color, t, 0, curr_tail);
-//     tails[idx] = curr_tail;
-//     d_out[idx] = pixel_color;
-//   }
+    if (!((c >= w) || (r >= h))) {
+      for (int i = 0; i < particle_cnt; i++) {
+        int particle_idx = (existPIdx[i] + batch_offset + buffer_tail_local * PARTICLE_NUM_PER_FIREWORK) %
+                           (FIREWORK_BUFFER_SIZE * PARTICLE_NUM_PER_FIREWORK);
+        int firework_idx = particle_idx / PARTICLE_NUM_PER_FIREWORK;
+        int pack_idx = particle_idx % PARTICLE_NUM_PER_FIREWORK;
+        particle curr = buffer[firework_idx].pack[pack_idx];
+        curr.color = sharedColor[existPIdx[i]];
+        colors(pixel_color, t, 0, curr, pixel_pos, curr_tail);
+      }
+    }
+    __syncthreads();
+  }
 
-//   updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
-// }
+  if (!((c >= w) || (r >= h))) {
+    tail_colors(pixel_color, t, 0, curr_tail);
+    tails[idx] = curr_tail;
+    d_out[idx] = pixel_color;
+  }
+
+  updateParticle(particles, schedule_idx, buffer_head, buffer_tail, t);
+}
+#endif
 
 void kernelLauncher(uchar4 *d_out, int w, int h, particle *particles, tail *tails, int *idx_holder, float t, int rand_generate) {
   const dim3 blockSize(TX, TY);

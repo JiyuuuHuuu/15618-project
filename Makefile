@@ -30,7 +30,7 @@ B_LDLIBS := $(addprefix -l, $(B_LIBS))
 NVCC=nvcc
 
 OBJS=$(OBJDIR)/firework.o $(OBJDIR)/kernel.o
-OBJS_BENCH=$(OBJDIR)/benchmark.o $(OBJDIR)/kernel.o
+OBJS_BENCH=$(OBJDIR)/benchmark.o $(OBJDIR)/kernel.o $(OBJDIR)/seq.o
 
 .PHONY: dirs clean
 
@@ -51,10 +51,13 @@ $(EXECUTABLE): dirs $(OBJS)
 $(OBJDIR)/benchmark.o: benchmark.cpp kernel.h
 		$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
-$(OBJDIR)/firework.o: main.cpp kernel.h build-glew
+$(OBJDIR)/seq.o: seq.cpp seq.h
+		$(NVCC) $< $(NVCCFLAGS) -c -o $@
+
+$(OBJDIR)/firework.o: main.cpp kernel.h constants.h build-glew
 		$(NVCC) $< $(NVCCFLAGS) $(INCLUDES) -c -o $@
 
-$(OBJDIR)/kernel.o: kernel.cu helper.cu_inl pattern.cu_inl color.cu_inl kernel.h helper_math.h
+$(OBJDIR)/kernel.o: kernel.cu helper.cu_inl pattern.cu_inl color.cu_inl kernel.h constants.h helper_math.h
 		$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
 build-glew:
