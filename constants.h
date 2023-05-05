@@ -8,8 +8,8 @@
 #define W 800
 #define H 400
 #define MAX_PARTICLE_NUM 65536
-#define FIREWORK_BUFFER_SIZE 32
-// #define BATCH
+// #define FIREWORK_BUFFER_SIZE 32
+#define BATCH
 #define MAX_SCHEDULE_NUM 256
 #define TITLE_STRING "firework"
 #define G 9.8f

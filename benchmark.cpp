@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
     counter++;
     // printf("%d %d\n", idx_holder_host[1], idx_holder_host[0]);
   }
-   printf("fps sequential = %d\n", (int)(counter/(float)DURATION));
+  printf("fps sequential = %d\n", (int)(counter/(float)DURATION));
 #endif
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
-#include <chrono>
-#include <thread>
+#include <stdio.h>
+#include <time.h>
 #include "helper_math.h"
 #include "seq.h"
 
@@ -9,20 +9,26 @@ float2 currP_host(float2 p_0, float2 v_0, float2 a, float t) {
   return p_0 + v_0*t + 1.0f/2.0f*a*t*t;
 }
 
-void sleepMicroseconds(int microseconds) {
-  std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+
+void sleepNanoseconds(long nanoseconds) {
+  struct timespec sleepTime;
+  sleepTime.tv_sec = 0;
+  sleepTime.tv_nsec = nanoseconds;
+  
+  nanosleep(&sleepTime, NULL);
 }
 
-void upshoots_host(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {}
+void upshoots_host(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {sleepNanoseconds(200);}
 
 void patterns_host(particle &curr, const float2 p_0, const float t, int offset, unsigned int seed, int idx) {
   curr.t_0 = t + 0.3f;
-  curr.explosion_height = 3.0f;
+  curr.explosion_height = 8.0f;
+  sleepNanoseconds(2000);
 }
 
-void colors_host(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {}// sleepMicroseconds(2);}
+void colors_host(uchar4 &pixel_color, const float t, int offset, const particle &curr, const float2 &pixel_pos, tail &curr_tail) {sleepNanoseconds(200);}
 
-void tail_colors_host(uchar4 &pixel_color, const float t, int offset, const tail &curr_tail) {}
+void tail_colors_host(uchar4 &pixel_color, const float t, int offset, const tail &curr_tail) {sleepNanoseconds(200);}
 
 void launchSchedule_host(particle *particles, int *schedule_idx, int *buffer_head, int *buffer_tail, float t, const particle *schedule) {
   // check and copy firework from schedule to work buffer for display
@@ -35,6 +41,7 @@ void launchSchedule_host(particle *particles, int *schedule_idx, int *buffer_hea
       buffer[*buffer_head].pack[0] = schedule_particle;
       (*schedule_idx)++;
       (*buffer_head)++;
+      printf("%d %d\n", *buffer_tail, *buffer_head);
     } else if (schedule_particle.t_0 > t){
       return;
     }
@@ -89,8 +96,8 @@ void fireworkHost(uchar4 *d_out, int w, int h, particle *particles, tail *tails,
   // display
   int freeup = 1;
   firework *buffer = reinterpret_cast<firework *>(particles);
-  for (int r = 0; r < w; r++) {
-    for (int c = 0; c < h; c++) {
+  for (int r = 0; r < h; r++) {
+    for (int c = 0; c < w; c++) {
       int tail_increment = 0;
       int idx = c + r*w;
       float2 pixel_pos = make_float2((float)c, (float)r);
@@ -125,7 +132,6 @@ void fireworkHost(uchar4 *d_out, int w, int h, particle *particles, tail *tails,
   }
 LOOP_END:
   updateParticle_host(particles, schedule_idx, buffer_head, buffer_tail, t);
-  // printf("%d %d\n", *buffer_tail, *buffer_head);
 }
 
 void seqLauncher(uchar4 *d_out, int w, int h, particle *particles, tail *tails, int *idx_holder, float t, const particle *schedule){
